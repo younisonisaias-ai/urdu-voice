@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Urdu Voice Narrator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+    .card {
+      background: rgba(255,255,255,0.08);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255,255,255,0.15);
+      border-radius: 20px;
+      padding: 40px;
+      width: 100%;
+      max-width: 580px;
+    }
+    h1 { font-size: 1.8rem; margin-bottom: 8px; color: #a78bfa; text-align: center; }
+    p.sub { color: #94a3b8; margin-bottom: 30px; font-size: 0.9rem; text-align: center; }
+    label { display: block; margin-bottom: 8px; color: #cbd5e1; font-size: 0.9rem; }
+    textarea {
+      width: 100%;
+      padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.05);
+      color: white;
+      font-size: 1rem;
+      margin-bottom: 20px;
+      resize: vertical;
+      min-height: 120px;
+    }
+    textarea::placeholder { color: #64748b; }
+    button {
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: white;
+      border: none;
+      padding: 14px;
+      border-radius: 50px;
+      font-size: 1rem;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.2s, opacity 0.2s;
+      margin-bottom: 20px;
+    }
+    button:hover { opacity: 0.9; transform: scale(1.02); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .voice-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .voice-option {
+      border: 2px solid rgba(167,139,250,0.3);
+      border-radius: 12px;
+      padding: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+    .voice-option:hover { border-color: #a78bfa; background: rgba(167,139,250,0.1); }
+    .voice-option.selected { border-color: #a78bfa; background: rgba(167,139,250,0.2); }
+    .voice-option .name { font-weight: bold; font-size: 0.95rem; }
+    .voice-option .desc { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+    .slider-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .slider-label { color: #cbd5e1; font-size: 0.85rem; }
+    .slider-value { color: #a78bfa; font-size: 0.85rem; font-weight: bold; }
+    input[type=range] {
+      width: 100%;
+      margin-bottom: 20px;
+      accent-color: #a78bfa;
+    }
+    .result { display: none; }
+    .urdu-text {
+      background: rgba(167,139,250,0.1);
+      border: 1px solid rgba(167,139,250,0.3);
+      border-radius: 10px;
+      padding: 14px;
+      margin-bottom: 15px;
+      font-size: 1.1rem;
+      line-height: 1.8;
+      direction: rtl;
+      text-align: right;
+    }
+    audio { width: 100%; border-radius: 10px; }
+    .status { text-align: center; margin-top: 10px; color: #94a3b8; font-size: 0.85rem; }
+    .error { color: #f87171; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <h1>🎙️ Urdu Voice Narrator</h1>
+  <p class="sub">Enter text → Choose a voice → Get Urdu audio</p>
+
+  <label>Choose Voice</label>
+  <div class="voice-grid">
+    <div class="voice-option selected" onclick="selectVoice('ur-PK-AsadNeural', this)">
+      <div class="name">👨 Asad</div>
+      <div class="desc">Pakistani Male</div>
+    </div>
+    <div class="voice-option" onclick="selectVoice('ur-PK-UzmaNeural', this)">
+      <div class="name">👩 Uzma</div>
+      <div class="desc">Pakistani Female</div>
+    </div>
+  </div>
+
+  <div class="slider-row">
+    <span class="slider-label">🐢 Speed</span>
+    <span class="slider-value" id="rateVal">Normal</span>
+  </div>
+  <input type="range" id="rate" min="-50" max="50" value="0" oninput="updateRate()">
+
+  <div class="slider-row">
+    <span class="slider-label">🎵 Pitch</span>
+    <span class="slider-value" id="pitchVal">Normal</span>
+  </div>
+  <input type="range" id="pitch" min="-50" max="50" value="0" oninput="updatePitch()">
+
+  <label>Enter Text (English or Urdu)</label>
+  <textarea id="inputText" placeholder="Type anything here and it will be translated to Urdu..."></textarea>
+
+  <button id="generateBtn" onclick="generate()">🔊 Generate Urdu Voice</button>
+
+  <div class="result" id="result">
+    <label>Urdu Translation</label>
+    <div class="urdu-text" id="urduText"></div>
+    <audio id="audioPlayer" controls></audio>
+  </div>
+  <div class="status" id="status"></div>
+</div>
+
+<script>
+  let selectedVoice = 'ur-PK-AsadNeural';
+
+  function selectVoice(voice, el) {
+    selectedVoice = voice;
+    document.querySelectorAll('.voice-option').forEach(e => e.classList.remove('selected'));
+    el.classList.add('selected');
+  }
+
+  function updateRate() {
+    const val = document.getElementById('rate').value;
+    document.getElementById('rateVal').textContent = val == 0 ? 'Normal' : (val > 0 ? '+' + val + '%' : val + '%');
+  }
+
+  function updatePitch() {
+    const val = document.getElementById('pitch').value;
+    document.getElementById('pitchVal').textContent = val == 0 ? 'Normal' : (val > 0 ? '+' + val + 'Hz' : val + 'Hz');
+  }
+
+  async function generate() {
+    const text = document.getElementById('inputText').value.trim();
+    const rate = document.getElementById('rate').value;
+    const pitch = document.getElementById('pitch').value;
+    const btn = document.getElementById('generateBtn');
+    const status = document.getElementById('status');
+
+    if (!text) return alert('Please enter some text!');
+
+    btn.disabled = true;
+    btn.textContent = '⏳ Processing...';
+    status.textContent = 'Translating and generating audio...';
+    document.getElementById('result').style.display = 'none';
+
+    const formData = new FormData();
+    formData.append('text', text);
+    formData.append('voice', selectedVoice);
+    formData.append('rate', rate);
+    formData.append('pitch', pitch);
+
+    try {
+      const res = await fetch('/generate', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (data.success) {
+        document.getElementById('urduText').textContent = data.urdu_text;
+        document.getElementById('audioPlayer').src = data.audio_url;
+        document.getElementById('result').style.display = 'block';
+        document.getElementById('audioPlayer').play();
+        status.textContent = '✅ Done!';
+      } else {
+        status.innerHTML = '<span class="error">❌ ' + data.error + '</span>';
+      }
+    } catch (e) {
+      status.innerHTML = '<span class="error">❌ ' + e.message + '</span>';
+    }
+    btn.disabled = false;
+    btn.textContent = '🔊 Generate Urdu Voice';
+  }
+</script>
+</body>
+</html>
