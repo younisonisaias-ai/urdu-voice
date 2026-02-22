@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Urdu Voice Narrator</title>
+  <title>Urdu & Sindhi Voice Narrator</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -26,6 +26,27 @@
     h1 { font-size: 1.8rem; margin-bottom: 8px; color: #a78bfa; text-align: center; }
     p.sub { color: #94a3b8; margin-bottom: 30px; font-size: 0.9rem; text-align: center; }
     label { display: block; margin-bottom: 8px; color: #cbd5e1; font-size: 0.9rem; }
+    .lang-toggle {
+      display: flex;
+      border-radius: 50px;
+      border: 2px solid rgba(167,139,250,0.4);
+      overflow: hidden;
+      margin-bottom: 24px;
+    }
+    .lang-btn {
+      flex: 1;
+      padding: 12px;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: bold;
+      transition: all 0.3s;
+      color: #94a3b8;
+    }
+    .lang-btn.active {
+      background: linear-gradient(135deg, #7c3aed, #a78bfa);
+      color: white;
+    }
     textarea {
       width: 100%;
       padding: 14px;
@@ -85,7 +106,7 @@
       accent-color: #a78bfa;
     }
     .result { display: none; }
-    .urdu-text {
+    .translated-text {
       background: rgba(167,139,250,0.1);
       border: 1px solid rgba(167,139,250,0.3);
       border-radius: 10px;
@@ -96,25 +117,62 @@
       direction: rtl;
       text-align: right;
     }
-    audio { width: 100%; border-radius: 10px; }
+    audio { width: 100%; border-radius: 10px; margin-bottom: 10px; }
     .status { text-align: center; margin-top: 10px; color: #94a3b8; font-size: 0.85rem; }
     .error { color: #f87171; }
+    .lang-badge {
+      display: inline-block;
+      background: rgba(167,139,250,0.2);
+      border: 1px solid rgba(167,139,250,0.4);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 0.75rem;
+      color: #a78bfa;
+      margin-bottom: 8px;
+    }
+    .info-box {
+      background: rgba(251,191,36,0.1);
+      border: 1px solid rgba(251,191,36,0.3);
+      border-radius: 10px;
+      padding: 10px 14px;
+      font-size: 0.8rem;
+      color: #fbbf24;
+      margin-bottom: 20px;
+      display: none;
+    }
+    .note-box {
+      background: rgba(52,211,153,0.1);
+      border: 1px solid rgba(52,211,153,0.3);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.78rem;
+      color: #34d399;
+      margin-top: 8px;
+      display: none;
+    }
   </style>
 </head>
 <body>
 <div class="card">
-  <h1>🎙️ Urdu Voice Narrator</h1>
-  <p class="sub">Enter text → Choose a voice → Get Urdu audio</p>
+  <h1>🎙️ Voice Narrator</h1>
+  <p class="sub">Translate & narrate in Urdu or Sindhi</p>
 
+  <label>Select Language</label>
+  <div class="lang-toggle">
+    <div class="lang-btn active" id="btn-urdu" onclick="switchLanguage('urdu')">🇵🇰 Urdu (اردو)</div>
+    <div class="lang-btn" id="btn-sindhi" onclick="switchLanguage('sindhi')">🌊 Sindhi (سنڌي)</div>
+  </div>
+
+  <!-- Shared voice options (same voices work for both) -->
   <label>Choose Voice</label>
   <div class="voice-grid">
-    <div class="voice-option selected" onclick="selectVoice('ur-PK-AsadNeural', this)">
+    <div class="voice-option selected" id="voice-male" onclick="selectVoice('ur-PK-AsadNeural', this)">
       <div class="name">👨 Asad</div>
-      <div class="desc">Pakistani Male</div>
+      <div class="desc" id="desc-male">Pakistani Male</div>
     </div>
-    <div class="voice-option" onclick="selectVoice('ur-PK-UzmaNeural', this)">
+    <div class="voice-option" id="voice-female" onclick="selectVoice('ur-PK-UzmaNeural', this)">
       <div class="name">👩 Uzma</div>
-      <div class="desc">Pakistani Female</div>
+      <div class="desc" id="desc-female">Pakistani Female</div>
     </div>
   </div>
 
@@ -130,21 +188,42 @@
   </div>
   <input type="range" id="pitch" min="-50" max="50" value="0" oninput="updatePitch()">
 
-  <label>Enter Text (English or Urdu)</label>
-  <textarea id="inputText" placeholder="Type anything here and it will be translated to Urdu..."></textarea>
+  <label>Enter Text (any language)</label>
+  <textarea id="inputText" placeholder="Type anything here and it will be translated..."></textarea>
 
-  <button id="generateBtn" onclick="generate()">🔊 Generate Urdu Voice</button>
+  <button id="generateBtn" onclick="generate()">🔊 Generate Voice</button>
 
   <div class="result" id="result">
-    <label>Urdu Translation</label>
-    <div class="urdu-text" id="urduText"></div>
+    <div class="lang-badge" id="resultBadge">Translation</div>
+    <div class="translated-text" id="translatedText"></div>
     <audio id="audioPlayer" controls></audio>
+    <div class="note-box" id="noteBox"></div>
   </div>
   <div class="status" id="status"></div>
 </div>
 
 <script>
   let selectedVoice = 'ur-PK-AsadNeural';
+  let selectedLanguage = 'urdu';
+
+  function switchLanguage(lang) {
+    selectedLanguage = lang;
+
+    document.getElementById('btn-urdu').classList.toggle('active', lang === 'urdu');
+    document.getElementById('btn-sindhi').classList.toggle('active', lang === 'sindhi');
+
+    // Show/hide Sindhi info box
+    document.getElementById('sindhi-info').style.display = lang === 'sindhi' ? 'block' : 'none';
+
+    // Reset to male voice on switch
+    selectedVoice = 'ur-PK-AsadNeural';
+    document.getElementById('voice-male').classList.add('selected');
+    document.getElementById('voice-female').classList.remove('selected');
+
+    // Hide previous result
+    document.getElementById('result').style.display = 'none';
+    document.getElementById('status').textContent = '';
+  }
 
   function selectVoice(voice, el) {
     selectedVoice = voice;
@@ -181,14 +260,26 @@
     formData.append('voice', selectedVoice);
     formData.append('rate', rate);
     formData.append('pitch', pitch);
+    formData.append('language', selectedLanguage);
 
     try {
       const res = await fetch('/generate', { method: 'POST', body: formData });
       const data = await res.json();
       if (data.success) {
-        document.getElementById('urduText').textContent = data.urdu_text;
+        const langLabel = selectedLanguage === 'sindhi' ? 'سنڌي ترجمو' : 'اردو ترجمہ';
+        document.getElementById('resultBadge').textContent = langLabel;
+        document.getElementById('translatedText').textContent = data.translated_text;
         document.getElementById('audioPlayer').src = data.audio_url;
         document.getElementById('result').style.display = 'block';
+
+        const noteBox = document.getElementById('noteBox');
+        if (data.note) {
+          noteBox.textContent = '✅ ' + data.note;
+          noteBox.style.display = 'block';
+        } else {
+          noteBox.style.display = 'none';
+        }
+
         document.getElementById('audioPlayer').play();
         status.textContent = '✅ Done!';
       } else {
@@ -198,7 +289,7 @@
       status.innerHTML = '<span class="error">❌ ' + e.message + '</span>';
     }
     btn.disabled = false;
-    btn.textContent = '🔊 Generate Urdu Voice';
+    btn.textContent = '🔊 Generate Voice';
   }
 </script>
 </body>
