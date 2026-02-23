@@ -1,732 +1,1347 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ur" dir="ltr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>PK AI Studio — Voice & Transcribe</title>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
-  <style>
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-    :root {
-      --bg: #0e0e14;
-      --surface: #16161f;
-      --surface2: #1e1e2a;
-      --border: #2c2c3e;
-      --accent: #a78bfa;
-      --accent2: #7c3aed;
-      --gold: #f0a500;
-      --orange: #ff6b35;
-      --text: #f0ede8;
-      --muted: #6b6878;
-      --success: #4ade80;
-      --error: #f87171;
-    }
-
-    html, body {
-      min-height: 100vh;
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'DM Sans', sans-serif;
-      overflow-x: hidden;
-    }
-
-    body::before {
-      content: '';
-      position: fixed;
-      top: -300px; left: 50%;
-      transform: translateX(-50%);
-      width: 900px; height: 600px;
-      background: radial-gradient(ellipse, rgba(124,58,237,0.12) 0%, transparent 70%);
-      pointer-events: none; z-index: 0;
-    }
-
-    .wrapper {
-      position: relative; z-index: 1;
-      min-height: 100vh;
-      display: flex; flex-direction: column;
-      align-items: center;
-      padding: 48px 20px 80px;
-    }
-
-    /* ── Header ── */
-    header {
-      text-align: center;
-      margin-bottom: 40px;
-      animation: fadeDown 0.7s ease both;
-    }
-
-    .logo-row {
-      display: inline-flex; align-items: center; gap: 12px;
-      margin-bottom: 20px;
-    }
-
-    .logo-icon {
-      width: 48px; height: 48px;
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      border-radius: 14px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 22px;
-      box-shadow: 0 0 40px rgba(124,58,237,0.4);
-    }
-
-    .logo-name {
-      font-family: 'Syne', sans-serif;
-      font-size: 22px; font-weight: 800;
-      letter-spacing: -0.5px;
-      background: linear-gradient(135deg, var(--text), var(--accent));
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-    }
-
-    header h1 {
-      font-family: 'Syne', sans-serif;
-      font-size: clamp(36px, 6vw, 64px);
-      font-weight: 800; line-height: 1.05; letter-spacing: -2px;
-      background: linear-gradient(135deg, var(--text) 40%, var(--accent) 100%);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
-      margin-bottom: 12px;
-    }
-
-    header p {
-      color: var(--muted); font-size: 15px; font-weight: 300;
-    }
-
-    /* ── Tab Switcher ── */
-    .tab-bar {
-      display: flex; gap: 8px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 50px;
-      padding: 6px;
-      margin-bottom: 36px;
-      animation: fadeDown 0.7s 0.1s ease both;
-    }
-
-    .tab-btn {
-      padding: 10px 28px;
-      border-radius: 50px;
-      border: none;
-      background: transparent;
-      color: var(--muted);
-      font-family: 'DM Sans', sans-serif;
-      font-size: 14px; font-weight: 500;
-      cursor: pointer;
-      transition: all 0.25s;
-    }
-
-    .tab-btn.active {
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      color: white;
-      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
-    }
-
-    /* ── Pages ── */
-    .page { width: 100%; max-width: 620px; display: none; animation: fadeUp 0.4s ease both; }
-    .page.active { display: block; }
-
-    /* ── Shared Card ── */
-    .card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      overflow: hidden;
-      box-shadow: 0 40px 80px rgba(0,0,0,0.5);
-    }
-
-    .card-body { padding: 36px; }
-
-    label.field-label {
-      display: block; margin-bottom: 8px;
-      color: #cbd5e1; font-size: 0.85rem; font-weight: 500;
-    }
-
-    /* ── Lang Toggle ── */
-    .lang-toggle {
-      display: flex; border-radius: 50px;
-      border: 2px solid rgba(167,139,250,0.3);
-      overflow: hidden; margin-bottom: 24px;
-    }
-
-    .lang-btn {
-      flex: 1; padding: 11px; text-align: center;
-      cursor: pointer; font-size: 0.9rem; font-weight: 600;
-      transition: all 0.3s; color: var(--muted);
-    }
-
-    .lang-btn.active {
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      color: white;
-    }
-
-    /* ── Voice Grid ── */
-    .voice-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: 10px; margin-bottom: 22px;
-    }
-
-    .voice-option {
-      border: 2px solid rgba(167,139,250,0.25);
-      border-radius: 12px; padding: 12px;
-      cursor: pointer; transition: all 0.2s; text-align: center;
-    }
-
-    .voice-option:hover { border-color: var(--accent); background: rgba(167,139,250,0.08); }
-    .voice-option.selected { border-color: var(--accent); background: rgba(167,139,250,0.15); }
-    .voice-option .vname { font-weight: 700; font-size: 0.95rem; }
-    .voice-option .vdesc { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
-
-    /* ── Sliders ── */
-    .slider-row {
-      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
-    }
-
-    .slider-label { color: #cbd5e1; font-size: 0.83rem; }
-    .slider-value { color: var(--accent); font-size: 0.83rem; font-weight: 700; }
-
-    input[type=range] {
-      width: 100%; margin-bottom: 18px; accent-color: var(--accent);
-    }
-
-    /* ── Textarea ── */
-    textarea {
-      width: 100%; padding: 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.12);
-      background: rgba(255,255,255,0.04);
-      color: var(--text); font-family: 'DM Sans', sans-serif;
-      font-size: 0.95rem; margin-bottom: 20px;
-      resize: vertical; min-height: 110px;
-    }
-
-    textarea::placeholder { color: #4a4a5a; }
-
-    /* ── Buttons ── */
-    .btn-primary {
-      background: linear-gradient(135deg, var(--accent2), var(--accent));
-      color: white; border: none;
-      padding: 14px; border-radius: 50px;
-      font-family: 'DM Sans', sans-serif;
-      font-size: 15px; font-weight: 500;
-      cursor: pointer; width: 100%;
-      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 4px 20px rgba(124,58,237,0.3);
-      margin-bottom: 20px;
-    }
-
-    .btn-primary:hover:not(:disabled) {
-      opacity: 0.9; transform: translateY(-1px);
-      box-shadow: 0 8px 30px rgba(124,58,237,0.5);
-    }
-
-    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-
-    /* ── Voice Result ── */
-    .voice-result { display: none; }
-
-    .translated-box {
-      background: rgba(167,139,250,0.08);
-      border: 1px solid rgba(167,139,250,0.25);
-      border-radius: 10px; padding: 14px;
-      margin-bottom: 14px;
-      font-size: 1.1rem; line-height: 1.9;
-      direction: rtl; text-align: right;
-    }
-
-    .lang-badge {
-      display: inline-block;
-      background: rgba(167,139,250,0.15);
-      border: 1px solid rgba(167,139,250,0.35);
-      border-radius: 20px; padding: 3px 12px;
-      font-size: 0.75rem; color: var(--accent);
-      margin-bottom: 8px;
-    }
-
-    audio { width: 100%; border-radius: 10px; margin-bottom: 8px; }
-
-    .note-box {
-      background: rgba(74,222,128,0.08);
-      border: 1px solid rgba(74,222,128,0.25);
-      border-radius: 8px; padding: 8px 12px;
-      font-size: 0.78rem; color: var(--success);
-      margin-top: 6px; display: none;
-    }
-
-    .status { text-align: center; margin-top: 8px; color: var(--muted); font-size: 0.83rem; }
-    .error { color: var(--error); }
-
-    /* ── Transcriber ── */
-    .drop-zone {
-      padding: 44px 36px;
-      border-bottom: 1px solid var(--border);
-      position: relative; cursor: pointer; transition: background 0.3s;
-    }
-
-    .drop-zone:hover, .drop-zone.dragover { background: var(--surface2); }
-    .drop-zone.dragover { outline: 2px solid var(--gold); }
-
-    .drop-zone input[type="file"] {
-      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
-    }
-
-    .drop-inner {
-      display: flex; flex-direction: column; align-items: center; gap: 12px;
-      pointer-events: none;
-    }
-
-    .drop-icon {
-      width: 62px; height: 62px;
-      border: 2px dashed var(--border);
-      border-radius: 16px;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 26px; background: var(--surface2);
-      transition: border-color 0.3s, transform 0.3s;
-    }
-
-    .drop-zone:hover .drop-icon, .drop-zone.dragover .drop-icon {
-      border-color: var(--gold); transform: scale(1.05);
-    }
-
-    .drop-title { font-size: 16px; font-weight: 500; }
-    .drop-sub { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
-
-    .file-chosen {
-      display: none; align-items: center; gap: 10px;
-      background: var(--surface2);
-      border: 1px solid var(--gold);
-      border-radius: 10px; padding: 10px 14px;
-      margin-top: 14px; pointer-events: none;
-    }
-
-    .file-chosen.show { display: flex; }
-    .file-chosen-name { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold); }
-
-    .t-actions { padding: 24px 36px; border-bottom: 1px solid var(--border); }
-
-    .btn-transcribe {
-      width: 100%; padding: 15px;
-      background: linear-gradient(135deg, var(--gold), var(--orange));
-      color: #0d0d0f; font-family: 'DM Sans', sans-serif;
-      font-size: 15px; font-weight: 600;
-      border: none; border-radius: 12px; cursor: pointer;
-      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
-      box-shadow: 0 4px 20px rgba(240,165,0,0.3);
-    }
-
-    .btn-transcribe:hover:not(:disabled) {
-      opacity: 0.92; transform: translateY(-1px);
-      box-shadow: 0 8px 30px rgba(240,165,0,0.45);
-    }
-
-    .btn-transcribe:disabled { opacity: 0.45; cursor: not-allowed; }
-
-    .progress-wrap { display: none; margin-top: 14px; }
-    .progress-wrap.show { display: block; }
-
-    .progress-bar-bg {
-      height: 3px; background: var(--border); border-radius: 99px; overflow: hidden;
-    }
-
-    .progress-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--gold), var(--orange));
-      border-radius: 99px; width: 0%;
-      animation: progressAnim 2.5s ease-in-out infinite;
-    }
-
-    @keyframes progressAnim {
-      0%   { width: 0%;  margin-left: 0; }
-      50%  { width: 70%; margin-left: 0; }
-      100% { width: 0%;  margin-left: 100%; }
-    }
-
-    .progress-label {
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      color: var(--muted); margin-top: 10px; text-align: center;
-    }
-
-    .t-status-bar {
-      display: none; align-items: center; gap: 10px;
-      padding: 10px 14px; border-radius: 10px;
-      margin-top: 12px; font-size: 13px;
-    }
-
-    .t-status-bar.show { display: flex; }
-    .t-status-bar.success { background: rgba(74,222,128,0.08); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
-    .t-status-bar.error   { background: rgba(248,113,113,0.08); color: var(--error);   border: 1px solid rgba(248,113,113,0.2); }
-
-    .output-section { padding: 28px 36px; display: none; }
-    .output-section.show { display: block; animation: fadeUp 0.4s ease both; }
-
-    .output-header {
-      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
-    }
-
-    .output-label {
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
-    }
-
-    .output-actions { display: flex; gap: 8px; }
-
-    .btn-small {
-      padding: 6px 14px; border-radius: 8px; font-size: 12px;
-      font-family: 'DM Mono', monospace; cursor: pointer;
-      border: 1px solid var(--border); background: var(--surface2);
-      color: var(--text); transition: all 0.2s;
-    }
-
-    .btn-small:hover { border-color: var(--gold); color: var(--gold); }
-
-    .transcript-box {
-      background: var(--bg); border: 1px solid var(--border);
-      border-radius: 12px; padding: 22px;
-      font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.8;
-      color: var(--text); min-height: 160px; max-height: 360px;
-      overflow-y: auto; white-space: pre-wrap; word-break: break-word; resize: vertical;
-    }
-
-    .transcript-box::-webkit-scrollbar { width: 5px; }
-    .transcript-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
-
-    .stats-row { display: flex; gap: 12px; margin-top: 12px; }
-
-    .stat-chip {
-      font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
-      background: var(--surface2); border: 1px solid var(--border);
-      padding: 4px 10px; border-radius: 6px;
-    }
-
-    .stat-chip span { color: var(--gold); font-weight: 500; }
-
-    /* ── Footer ── */
-    footer {
-      margin-top: 44px; text-align: center;
-      font-family: 'DM Mono', monospace; font-size: 11px;
-      color: var(--muted); letter-spacing: 1px;
-      animation: fadeUp 0.8s 0.4s ease both;
-    }
-
-    footer a { color: var(--accent); text-decoration: none; }
-
-    /* ── Animations ── */
-    @keyframes fadeDown {
-      from { opacity: 0; transform: translateY(-16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes fadeUp {
-      from { opacity: 0; transform: translateY(16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (max-width: 580px) {
-      .card-body, .drop-zone, .t-actions, .output-section { padding-left: 20px; padding-right: 20px; }
-    }
-  </style>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>اردو آواز — Urdu Voice Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Nastaliq+Urdu:wght@400;600;700&family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono&display=swap" rel="stylesheet">
+<style>
+  /* ── Design tokens ─────────────────────────────────────── */
+  :root {
+    --bg:        #0a0d12;
+    --surface:   #111621;
+    --card:      #181e2c;
+    --border:    #232d42;
+    --border2:   #2e3d5a;
+    --teal:      #00d2c8;
+    --teal2:     #00b8ae;
+    --gold:      #f5c842;
+    --gold2:     #e0b230;
+    --text:      #e8edf5;
+    --muted:     #7a8ba8;
+    --danger:    #ff5c5c;
+    --success:   #36d98e;
+    --radius:    14px;
+    --radius-sm: 8px;
+    --shadow:    0 4px 32px rgba(0,0,0,0.45);
+    --glow-teal: 0 0 24px rgba(0,210,200,0.18);
+    --glow-gold: 0 0 24px rgba(245,200,66,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(ellipse 70% 50% at 10% 20%, rgba(0,210,200,0.06) 0%, transparent 60%),
+      radial-gradient(ellipse 50% 40% at 90% 80%, rgba(245,200,66,0.05) 0%, transparent 60%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .wrap {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 0 24px 80px;
+    position: relative; z-index: 1;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .logo { display: flex; align-items: center; gap: 14px; }
+  .logo-icon {
+    width: 44px; height: 44px;
+    background: linear-gradient(135deg, var(--teal), var(--gold));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: var(--glow-teal);
+  }
+  .logo-text h1 {
+    font-size: 20px; font-weight: 700;
+    letter-spacing: -0.3px;
+    background: linear-gradient(90deg, var(--teal), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .logo-text p {
+    font-size: 12px; color: var(--muted); margin-top: 2px;
+    font-family: 'Noto Nastaliq Urdu', serif;
+  }
+  .badge {
+    background: rgba(0,210,200,0.1);
+    border: 1px solid rgba(0,210,200,0.25);
+    color: var(--teal);
+    font-size: 12px; font-weight: 600;
+    padding: 6px 14px; border-radius: 100px;
+    letter-spacing: 0.5px;
+  }
+
+  .hero { text-align: center; margin-bottom: 48px; }
+  .hero h2 {
+    font-size: clamp(28px, 5vw, 44px);
+    font-weight: 700;
+    letter-spacing: -1.5px;
+    line-height: 1.1;
+    margin-bottom: 14px;
+  }
+  .hero h2 span { color: var(--teal); }
+  .hero h2 em { font-style: normal; color: var(--gold); }
+  .hero-urdu {
+    font-family: 'Noto Nastaliq Urdu', serif;
+    font-size: 22px;
+    color: var(--muted);
+    direction: rtl;
+    margin-top: 6px;
+  }
+  .hero p {
+    color: var(--muted);
+    font-size: 15px;
+    max-width: 500px;
+    margin: 12px auto 0;
+    line-height: 1.6;
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+  }
+
+  .section-label {
+    font-size: 11px; font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-label::before {
+    content: '';
+    width: 3px; height: 14px;
+    background: var(--teal);
+    border-radius: 2px;
+  }
+
+  .input-wrap { position: relative; }
+  textarea {
+    width: 100%;
+    min-height: 150px;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    line-height: 1.7;
+    padding: 16px 20px;
+    resize: vertical;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    outline: none;
+  }
+  textarea:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(0,210,200,0.12);
+  }
+  textarea::placeholder { color: var(--muted); }
+  .char-count {
+    position: absolute; bottom: 10px; right: 14px;
+    font-size: 11px; color: var(--muted);
+    font-family: 'DM Mono', monospace;
+  }
+
+  .settings-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  @media(max-width:600px){ .settings-row { grid-template-columns: 1fr; } }
+
+  .setting-group label {
+    display: block;
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 0.8px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  select, .slider-wrap input[type=range] {
+    width: 100%;
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text);
+    padding: 10px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%237a8ba8' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+  select:focus { border-color: var(--teal); }
+  select option { background: var(--card); }
+
+  .slider-wrap { display: flex; flex-direction: column; }
+  .slider-value {
+    font-size: 11px; color: var(--teal);
+    font-family: 'DM Mono', monospace;
+    margin-bottom: 6px;
+  }
+  input[type=range] {
+    padding: 6px 0; border: none; background: transparent;
+    cursor: pointer;
+  }
+  input[type=range]::-webkit-slider-runnable-track {
+    height: 4px; border-radius: 4px;
+    background: linear-gradient(to right, var(--teal) var(--pct, 50%), var(--border2) var(--pct, 50%));
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px; height: 16px;
+    background: var(--teal);
+    border-radius: 50%;
+    margin-top: -6px;
+    box-shadow: 0 0 0 3px rgba(0,210,200,0.2);
+    transition: box-shadow 0.2s;
+  }
+  input[type=range]:focus::-webkit-slider-thumb {
+    box-shadow: 0 0 0 5px rgba(0,210,200,0.3);
+  }
+
+  .btn-generate {
+    width: 100%;
+    margin-top: 24px;
+    padding: 16px;
+    border-radius: var(--radius-sm);
+    border: none;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px; font-weight: 700;
+    letter-spacing: 0.2px;
+    background: linear-gradient(135deg, var(--teal), #00b8ae);
+    color: #0a0d12;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+    box-shadow: var(--glow-teal);
+    position: relative; overflow: hidden;
+  }
+  .btn-generate::after {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.12));
+  }
+  .btn-generate:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(0,210,200,0.35);
+  }
+  .btn-generate:active:not(:disabled) { transform: translateY(0); }
+  .btn-generate:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+  .progress-wrap { display: none; margin-top: 24px; }
+  .progress-wrap.show { display: block; }
+  .progress-bar-outer {
+    height: 4px; background: var(--border);
+    border-radius: 4px; overflow: hidden;
+    margin-bottom: 12px;
+  }
+  .progress-bar-inner {
+    height: 100%;
+    background: linear-gradient(90deg, var(--teal), var(--gold));
+    border-radius: 4px;
+    width: 0%;
+    transition: width 0.4s ease;
+    animation: shimmer 1.5s infinite;
+  }
+  @keyframes shimmer {
+    0%   { filter: brightness(1); }
+    50%  { filter: brightness(1.3); }
+    100% { filter: brightness(1); }
+  }
+  .progress-steps { display: flex; gap: 8px; flex-wrap: wrap; }
+  .step {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 12px; font-weight: 500;
+    color: var(--muted);
+    padding: 5px 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    transition: all 0.3s;
+  }
+  .step.active { color: var(--teal); border-color: var(--teal); background: rgba(0,210,200,0.08); }
+  .step.done   { color: var(--success); border-color: rgba(54,217,142,0.3); background: rgba(54,217,142,0.08); }
+  .step .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .step.active .dot { animation: pulse 1s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+  .urdu-preview {
+    display: none;
+    margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 20px 24px;
+    direction: rtl;
+    text-align: right;
+  }
+  .urdu-preview.show { display: block; animation: fadeUp 0.4s ease; }
+  .urdu-preview-label {
+    font-size: 11px; font-weight: 600;
+    letter-spacing: 1px; text-transform: uppercase;
+    color: var(--gold);
+    direction: ltr; text-align: left;
+    margin-bottom: 12px;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .urdu-preview-label::before { content: '✦'; font-size: 8px; }
+  .urdu-text {
+    font-family: 'Noto Nastaliq Urdu', serif;
+    font-size: 20px; line-height: 2;
+    color: var(--text);
+  }
+
+  .results-section { display: none; }
+  .results-section.show { display: block; animation: fadeUp 0.5s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .results-title {
+    font-size: 18px; font-weight: 700;
+    margin-bottom: 20px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .results-title span {
+    background: linear-gradient(90deg, var(--teal), var(--gold));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .result-count {
+    background: var(--teal);
+    color: #0a0d12;
+    font-size: 11px; font-weight: 800;
+    padding: 3px 9px; border-radius: 100px;
+    -webkit-text-fill-color: #0a0d12;
+  }
+
+  .voice-grid { display: flex; flex-direction: column; gap: 14px; }
+
+  .voice-card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 20px 24px;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    animation: fadeUp 0.4s ease both;
+  }
+  .voice-card:hover {
+    border-color: var(--border2);
+    box-shadow: 0 2px 16px rgba(0,0,0,0.3);
+  }
+  .voice-card.best {
+    border-color: rgba(0,210,200,0.4);
+    background: rgba(0,210,200,0.04);
+    box-shadow: var(--glow-teal);
+  }
+
+  .voice-card-header {
+    display: flex; align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    gap: 12px;
+  }
+  .voice-info { display: flex; align-items: center; gap: 12px; flex: 1; min-width: 0; }
+  .engine-badge {
+    flex-shrink: 0;
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .engine-badge.elevenlabs { background: rgba(245,200,66,0.12); }
+  .engine-badge.google     { background: rgba(54,217,142,0.12); }
+  .engine-badge.edge       { background: rgba(0,210,200,0.12);  }
+
+  .voice-name {
+    font-size: 14px; font-weight: 600; color: var(--text);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .voice-engine-tag {
+    font-size: 11px; font-weight: 600;
+    padding: 2px 8px; border-radius: 100px;
+    margin-top: 3px; display: inline-block;
+  }
+  .voice-engine-tag.elevenlabs { background: rgba(245,200,66,0.15); color: var(--gold); }
+  .voice-engine-tag.google     { background: rgba(54,217,142,0.15); color: var(--success); }
+  .voice-engine-tag.edge       { background: rgba(0,210,200,0.15);  color: var(--teal); }
+
+  .best-tag {
+    flex-shrink: 0;
+    background: linear-gradient(135deg, var(--teal), var(--gold));
+    color: #0a0d12;
+    font-size: 10px; font-weight: 800;
+    letter-spacing: 0.5px;
+    padding: 4px 10px; border-radius: 100px;
+    text-transform: uppercase;
+  }
+
+  .audio-player { display: flex; align-items: center; gap: 12px; }
+  .play-btn {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: none; cursor: pointer;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    color: #0a0d12;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    transition: transform 0.15s, box-shadow 0.2s;
+    box-shadow: 0 2px 12px rgba(0,210,200,0.3);
+  }
+  .play-btn:hover { transform: scale(1.08); }
+  .play-btn.playing { background: linear-gradient(135deg, var(--gold), var(--gold2)); }
+
+  .audio-progress { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+  .progress-track {
+    height: 4px; background: var(--border2);
+    border-radius: 4px; cursor: pointer; overflow: hidden;
+    position: relative;
+  }
+  .progress-fill {
+    height: 100%; width: 0%;
+    background: linear-gradient(90deg, var(--teal), var(--gold));
+    border-radius: 4px;
+    transition: width 0.1s linear;
+    pointer-events: none;
+  }
+  .time-row {
+    display: flex; justify-content: space-between;
+    font-size: 11px; font-family: 'DM Mono', monospace;
+    color: var(--muted);
+  }
+
+  .download-btn {
+    flex-shrink: 0;
+    width: 36px; height: 36px;
+    border: 1.5px solid var(--border2);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+    transition: all 0.2s;
+  }
+  .download-btn:hover {
+    border-color: var(--teal); color: var(--teal);
+    background: rgba(0,210,200,0.08);
+  }
+
+  .pipeline-section { display: none; margin-top: 20px; }
+  .pipeline-section.show { display: block; animation: fadeUp 0.4s ease; }
+
+  .pipeline-toggle {
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500;
+    display: flex; align-items: center; gap: 6px;
+    padding: 8px 0;
+    transition: color 0.2s;
+  }
+  .pipeline-toggle:hover { color: var(--text); }
+  .pipeline-toggle .arrow { transition: transform 0.2s; }
+  .pipeline-toggle.open .arrow { transform: rotate(180deg); }
+
+  .pipeline-steps { display: none; }
+  .pipeline-steps.open { display: flex; flex-direction: column; gap: 10px; }
+
+  .pipeline-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+  }
+  .pipeline-step-label {
+    font-size: 11px; font-weight: 700; letter-spacing: 1px;
+    text-transform: uppercase; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .pipeline-step-label .num {
+    width: 20px; height: 20px;
+    border-radius: 50%;
+    background: var(--border2);
+    color: var(--muted);
+    font-size: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pipeline-step-text {
+    font-family: 'Noto Nastaliq Urdu', serif;
+    font-size: 16px; line-height: 2;
+    direction: rtl; text-align: right;
+    color: var(--text);
+  }
+
+  .error-msg {
+    display: none;
+    margin-top: 16px;
+    background: rgba(255,92,92,0.08);
+    border: 1px solid rgba(255,92,92,0.25);
+    border-radius: var(--radius-sm);
+    padding: 14px 18px;
+    color: var(--danger);
+    font-size: 14px;
+    align-items: center; gap: 10px;
+  }
+  .error-msg.show { display: flex; animation: fadeUp 0.3s ease; }
+
+  .info-strip { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 32px; }
+  .info-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 8px 16px;
+    font-size: 12px; font-weight: 500;
+    color: var(--muted);
+  }
+  .info-pill .dot { width: 7px; height: 7px; border-radius: 50%; }
+  .dot-teal   { background: var(--teal); box-shadow: 0 0 6px var(--teal); }
+  .dot-gold   { background: var(--gold); }
+  .dot-green  { background: var(--success); }
+  .dot-purple { background: #a78bfa; }
+  .dot-muted  { background: var(--muted); }
+
+  /* ── TRANSCRIBE TOGGLE BUTTON ─────────────────────────────── */
+  .transcribe-toggle-wrap {
+    display: flex;
+    justify-content: center;
+    margin: 40px 0 0;
+  }
+
+  .btn-transcribe-toggle {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1.5px dashed var(--border2);
+    border-radius: var(--radius);
+    padding: 18px 32px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--muted);
+    width: 100%;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn-transcribe-toggle::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(0,210,200,0.04), rgba(245,200,66,0.04));
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  .btn-transcribe-toggle:hover {
+    border-color: var(--teal);
+    color: var(--text);
+    box-shadow: var(--glow-teal);
+  }
+  .btn-transcribe-toggle:hover::before { opacity: 1; }
+  .btn-transcribe-toggle.active {
+    border-color: var(--teal);
+    border-style: solid;
+    color: var(--teal);
+    background: rgba(0,210,200,0.06);
+  }
+
+  .btn-transcribe-toggle .toggle-icon {
+    width: 40px; height: 40px;
+    border-radius: 10px;
+    background: rgba(0,210,200,0.1);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+    flex-shrink: 0;
+    transition: background 0.25s;
+  }
+  .btn-transcribe-toggle:hover .toggle-icon,
+  .btn-transcribe-toggle.active .toggle-icon {
+    background: rgba(0,210,200,0.18);
+  }
+
+  .btn-transcribe-toggle .toggle-text { flex: 1; text-align: left; }
+  .btn-transcribe-toggle .toggle-text strong {
+    display: block;
+    font-size: 15px;
+    margin-bottom: 2px;
+    color: var(--text);
+  }
+  .btn-transcribe-toggle .toggle-text span {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+  }
+
+  .btn-transcribe-toggle .toggle-chevron {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border2);
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.25s;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .btn-transcribe-toggle:hover .toggle-chevron {
+    border-color: var(--teal);
+    color: var(--teal);
+  }
+  .btn-transcribe-toggle.active .toggle-chevron {
+    border-color: var(--teal);
+    color: var(--teal);
+    transform: rotate(180deg);
+    background: rgba(0,210,200,0.1);
+  }
+
+  /* ── Transcribe section (collapsible) ─────────────────────── */
+  .transcribe-collapsible {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.5s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.35s ease,
+                margin-top 0.35s ease;
+    margin-top: 0;
+  }
+  .transcribe-collapsible.open {
+    max-height: 1200px;
+    opacity: 1;
+    margin-top: 16px;
+  }
+
+  /* ── Upload zone ──────────────────────────────────────────── */
+  .upload-zone {
+    border: 2px dashed var(--border2);
+    border-radius: var(--radius-sm);
+    padding: 36px 24px; text-align: center;
+    cursor: pointer; position: relative;
+    background: var(--surface);
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--teal);
+    background: rgba(0,210,200,0.04);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0;
+    opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 36px; margin-bottom: 12px; }
+  .upload-zone h3 { font-size: 15px; font-weight: 600; margin-bottom: 6px; }
+  .upload-zone p  { font-size: 13px; color: var(--muted); }
+  .file-name-display {
+    display: none; margin-top: 12px;
+    font-size: 13px; font-weight: 600; color: var(--teal);
+    align-items: center; justify-content: center; gap: 8px;
+  }
+  .file-name-display.show { display: flex; }
+
+  .btn-transcribe {
+    width: 100%; margin-top: 20px; padding: 14px;
+    border-radius: var(--radius-sm);
+    border: 1.5px solid var(--border2);
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px; font-weight: 600;
+    background: var(--surface); color: var(--text);
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: border-color 0.2s, background 0.2s, transform 0.15s;
+  }
+  .btn-transcribe:hover:not(:disabled) {
+    border-color: var(--teal);
+    background: rgba(0,210,200,0.06);
+    transform: translateY(-1px);
+  }
+  .btn-transcribe:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+  .transcript-result {
+    display: none; margin-top: 20px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm); overflow: hidden;
+  }
+  .transcript-result.show { display: block; animation: fadeUp 0.4s ease; }
+  .transcript-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    background: rgba(0,0,0,0.2);
+  }
+  .transcript-header-left {
+    display: flex; align-items: center; gap: 8px;
+    font-size: 12px; font-weight: 700;
+    letter-spacing: 1px; text-transform: uppercase; color: var(--success);
+  }
+  .transcript-header-left::before { content: '✔'; font-size: 13px; }
+  .transcript-actions {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  }
+  .btn-use-transcript {
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    color: #0a0d12; border: none; border-radius: 6px;
+    padding: 7px 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 700; cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s;
+  }
+  .btn-transcript-action {
+    background: transparent;
+    border: 1.5px solid var(--border2);
+    border-radius: 6px;
+    padding: 7px 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 600;
+    color: var(--muted);
+    cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  .btn-transcript-action:hover {
+    border-color: var(--teal);
+    color: var(--teal);
+    background: rgba(0,210,200,0.06);
+    transform: translateY(-1px);
+  }
+  .btn-transcript-action.copied {
+    border-color: var(--success);
+    color: var(--success);
+    background: rgba(54,217,142,0.08);
+  }
+  .btn-use-transcript:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,210,200,0.3);
+  }
+  .transcript-body { padding: 20px; }
+  .transcript-text {
+    font-size: 15px; line-height: 1.8; color: var(--text);
+    white-space: pre-wrap; margin-bottom: 0;
+  }
+
+  .transcribe-error {
+    display: none; margin-top: 14px;
+    background: rgba(255,92,92,0.08);
+    border: 1px solid rgba(255,92,92,0.25);
+    border-radius: var(--radius-sm);
+    padding: 12px 16px; color: var(--danger); font-size: 13px;
+    align-items: center; gap: 8px;
+  }
+  .transcribe-error.show { display: flex; }
+</style>
 </head>
 <body>
-<div class="wrapper">
 
+<div class="wrap">
+
+  <!-- Header -->
   <header>
-    <div class="logo-row">
-      <div class="logo-icon">🇵🇰</div>
-      <span class="logo-name">PK AI Studio</span>
+    <div class="logo">
+      <div class="logo-icon">🎙️</div>
+      <div class="logo-text">
+        <h1>Urdu Voice Studio</h1>
+        <p>اردو آواز اسٹوڈیو</p>
+      </div>
     </div>
-    <h1>Voice & Transcribe</h1>
-    <p>Translate to Urdu/Sindhi · Narrate · Transcribe any video</p>
+    <div class="badge">BETA</div>
   </header>
 
-  <!-- Tab Bar -->
-  <div class="tab-bar">
-    <button class="tab-btn active" id="tab-voice" onclick="showTab('voice')">🎙️ Voice Narrator</button>
-    <button class="tab-btn" id="tab-transcript" onclick="showTab('transcript')">📝 Transcriber</button>
+  <!-- Hero -->
+  <div class="hero">
+    <h2>Turn any text into <span>natural</span><br><em>Pakistani Urdu</em> audio</h2>
+    <div class="hero-urdu">کوئی بھی متن — خودبخود اردو آواز میں</div>
+    <p>Type in English or Urdu. Our AI pipeline translates, refines, and speaks it in authentic Pakistani Urdu across multiple voices.</p>
   </div>
 
-  <!-- ══ VOICE PAGE ══ -->
-  <div class="page active" id="page-voice">
-    <div class="card">
-      <div class="card-body">
+  <!-- Info pills -->
+  <div class="info-strip">
+    <div class="info-pill"><div class="dot dot-teal"></div>Auto English → Urdu translation</div>
+    <div class="info-pill"><div class="dot dot-gold"></div>AI text refinement</div>
+    <div class="info-pill"><div class="dot dot-green"></div>Multiple voice engines</div>
+    <div class="info-pill"><div class="dot dot-purple"></div>Pakistani Urdu optimized</div>
+  </div>
 
-        <label class="field-label">Select Language</label>
-        <div class="lang-toggle">
-          <div class="lang-btn active" id="btn-urdu" onclick="switchLanguage('urdu')">🇵🇰 Urdu (اردو)</div>
-          <div class="lang-btn" id="btn-sindhi" onclick="switchLanguage('sindhi')">🌊 Sindhi (سنڌي)</div>
+  <!-- Transcribe Toggle Button (top) -->
+  <div class="transcribe-toggle-wrap" style="margin-bottom: 20px; margin-top: 0;">
+    <button class="btn-transcribe-toggle" id="transcribeToggleBtn" onclick="toggleTranscribeSection()">
+      <div class="toggle-icon">🎬</div>
+      <div class="toggle-text">
+        <strong>Video / Audio to Text</strong>
+        <span>Transcribe with Whisper AI, then use as voice input</span>
+      </div>
+      <div class="toggle-chevron">▼</div>
+    </button>
+  </div>
+
+  <!-- Transcribe collapsible (top) -->
+  <div class="transcribe-collapsible" id="transcribeCollapsible" style="margin-top: 0; margin-bottom: 20px;">
+    <div class="card" style="margin-bottom: 0;">
+      <div class="section-label">Transcribe Video or Audio</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;">
+        Upload a video or audio file — Whisper AI will transcribe it to text. You can then send the transcript straight to the voice generator below.
+      </p>
+      <div class="upload-zone" id="uploadZone"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event)">
+        <input type="file" id="videoFile"
+               accept="video/*,audio/*,.mp4,.mp3,.wav,.webm,.ogg,.m4a,.mov,.avi"
+               onchange="handleFileSelect(this)">
+        <div class="upload-icon">🎬</div>
+        <h3>Drop your video or audio here</h3>
+        <p>or click to browse — MP4, MP3, WAV, WebM, MOV, AVI supported</p>
+        <div class="file-name-display" id="fileNameDisplay">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <span id="fileNameText">No file selected</span>
         </div>
-
-        <label class="field-label">Choose Voice</label>
-        <div class="voice-grid">
-          <div class="voice-option selected" id="voice-male" onclick="selectVoice('ur-PK-AsadNeural', this)">
-            <div class="vname">👨 Asad</div>
-            <div class="vdesc">Pakistani Male</div>
+      </div>
+      <button class="btn-transcribe" id="transcribeBtn" onclick="transcribe()" disabled>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+          <line x1="12" y1="19" x2="12" y2="23"/>
+          <line x1="8" y1="23" x2="16" y2="23"/>
+        </svg>
+        Transcribe with Whisper AI
+      </button>
+      <div class="transcribe-error" id="transcribeError">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        <span id="transcribeErrorText">Error transcribing file.</span>
+      </div>
+      <div class="transcript-result" id="transcriptResult">
+        <div class="transcript-header">
+          <div class="transcript-header-left">Transcript Ready</div>
+          <div class="transcript-actions">
+            <button class="btn-use-transcript" onclick="useTranscriptForTTS()">↓ Use for Voice Generation</button>
+            <button class="btn-transcript-action" id="copyTranscriptBtn" onclick="copyTranscript()">📋 Copy</button>
+            <button class="btn-transcript-action" onclick="downloadTranscript()">⬇ Download</button>
           </div>
-          <div class="voice-option" id="voice-female" onclick="selectVoice('ur-PK-UzmaNeural', this)">
-            <div class="vname">👩 Uzma</div>
-            <div class="vdesc">Pakistani Female</div>
-          </div>
         </div>
-
-        <div class="slider-row">
-          <span class="slider-label">🐢 Speed</span>
-          <span class="slider-value" id="rateVal">Normal</span>
+        <div class="transcript-body">
+          <div class="transcript-text" id="transcriptText"></div>
         </div>
-        <input type="range" id="rate" min="-50" max="50" value="0" oninput="updateRate()">
-
-        <div class="slider-row">
-          <span class="slider-label">🎵 Pitch</span>
-          <span class="slider-value" id="pitchVal">Normal</span>
-        </div>
-        <input type="range" id="pitch" min="-50" max="50" value="0" oninput="updatePitch()">
-
-        <label class="field-label">Enter Text (any language)</label>
-        <textarea id="inputText" placeholder="Type anything here and it will be translated..."></textarea>
-
-        <button class="btn-primary" id="generateBtn" onclick="generate()">🔊 Generate Voice</button>
-
-        <div class="voice-result" id="voiceResult">
-          <div class="lang-badge" id="resultBadge">Translation</div>
-          <div class="translated-box" id="translatedText"></div>
-          <audio id="audioPlayer" controls></audio>
-          <div class="note-box" id="noteBox"></div>
-        </div>
-
-        <div class="status" id="voiceStatus"></div>
       </div>
     </div>
   </div>
 
-  <!-- ══ TRANSCRIPT PAGE ══ -->
-  <div class="page" id="page-transcript">
-    <div class="card">
+  <!-- Main input card -->
+  <div class="card">
+    <div class="section-label">Your Text</div>
 
-      <!-- Drop Zone -->
-      <div class="drop-zone" id="dropZone">
-        <input type="file" id="videoInput" accept="video/*,audio/*" />
-        <div class="drop-inner">
-          <div class="drop-icon">🎬</div>
-          <div class="drop-title">Drop your video or audio here</div>
-          <div class="drop-sub">MP4 · MOV · AVI · MKV · MP3 · WAV</div>
-          <div class="file-chosen" id="fileChosen">
-            <span>📎</span>
-            <span class="file-chosen-name" id="fileName"></span>
-          </div>
+    <div class="input-wrap">
+      <textarea id="inputText"
+        placeholder='Type in English or Urdu...&#10;&#10;e.g. "Subscribe to Christian Revive and turn on notifications so you never miss our weekly lesson updates."'
+        oninput="updateCharCount(this)"></textarea>
+      <span class="char-count" id="charCount">0 chars</span>
+    </div>
+
+    <div class="settings-row">
+      <div class="setting-group">
+        <label>Language Output</label>
+        <select id="langSelect">
+          <option value="ur" selected>🇵🇰 Pakistani Urdu</option>
+          <option value="sd">🇵🇰 Sindhi</option>
+        </select>
+      </div>
+      <div class="setting-group">
+        <label>Speed</label>
+        <div class="slider-wrap">
+          <div class="slider-value" id="rateVal">Normal (-5%)</div>
+          <input type="range" id="rateSlider" min="-30" max="30" value="-5"
+            oninput="updateSlider(this, 'rateVal', '%', 'Normal')">
         </div>
       </div>
-
-      <!-- Transcribe Button -->
-      <div class="t-actions">
-        <button class="btn-transcribe" id="transcribeBtn" disabled>Choose a file to begin</button>
-        <div class="progress-wrap" id="progressWrap">
-          <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
-          <div class="progress-label" id="progressLabel">⏳ Processing...</div>
-        </div>
-        <div class="t-status-bar" id="tStatusBar"></div>
-      </div>
-
-      <!-- Output -->
-      <div class="output-section" id="outputSection">
-        <div class="output-header">
-          <span class="output-label">Transcript</span>
-          <div class="output-actions">
-            <button class="btn-small" id="copyBtn">Copy</button>
-            <button class="btn-small" id="downloadBtn">Download .txt</button>
-          </div>
-        </div>
-        <div class="transcript-box" id="transcriptBox"></div>
-        <div class="stats-row">
-          <div class="stat-chip">Words: <span id="wordCount">0</span></div>
-          <div class="stat-chip">Chars: <span id="charCount">0</span></div>
+      <div class="setting-group">
+        <label>Pitch</label>
+        <div class="slider-wrap">
+          <div class="slider-value" id="pitchVal">Normal (0Hz)</div>
+          <input type="range" id="pitchSlider" min="-20" max="20" value="0"
+            oninput="updateSlider(this, 'pitchVal', 'Hz', 'Normal')">
         </div>
       </div>
+    </div>
 
+    <button class="btn-generate" id="generateBtn" onclick="generate()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polygon points="5 3 19 12 5 21 5 3"/>
+      </svg>
+      Generate Urdu Audio
+    </button>
+
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar-outer">
+        <div class="progress-bar-inner" id="progressBar"></div>
+      </div>
+      <div class="progress-steps" id="progressSteps">
+        <div class="step" id="step0"><div class="dot"></div>Translating</div>
+        <div class="step" id="step1"><div class="dot"></div>AI Refinement</div>
+        <div class="step" id="step2"><div class="dot"></div>TTS Optimization</div>
+        <div class="step" id="step3"><div class="dot"></div>Generating Audio</div>
+      </div>
+    </div>
+
+    <div class="error-msg" id="errorMsg">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="errorText">Something went wrong</span>
+    </div>
+
+    <div class="urdu-preview" id="urduPreview">
+      <div class="urdu-preview-label">Final Urdu Text</div>
+      <div class="urdu-text" id="urduText"></div>
     </div>
   </div>
 
-  <footer>
-    Powered by <a href="https://github.com/openai/whisper" target="_blank">OpenAI Whisper</a> &
-    <a href="https://azure.microsoft.com/en-us/products/cognitive-services/text-to-speech/" target="_blank">Edge TTS</a>
-    · No data stored
-  </footer>
+  <!-- Results -->
+  <div class="results-section" id="resultsSection">
+    <div class="results-title">
+      <span>Generated Voices</span>
+      <div class="result-count" id="voiceCount">0</div>
+    </div>
+    <div class="voice-grid" id="voiceGrid"></div>
+    <div class="pipeline-section" id="pipelineSection">
+      <button class="pipeline-toggle" id="pipelineToggle" onclick="togglePipeline()">
+        <svg class="arrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+        Show AI pipeline stages
+      </button>
+      <div class="pipeline-steps" id="pipelineSteps"></div>
+    </div>
+  </div>
 
-</div>
+
+</div><!-- /wrap -->
 
 <script>
-  // ── Tab switching ──
-  function showTab(tab) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById('page-' + tab).classList.add('active');
-    document.getElementById('tab-' + tab).classList.add('active');
-  }
+// ── Audio elements pool ───────────────────────────────────────────
+const audioPool = {};
 
-  // ── Voice Narrator ──
-  let selectedVoice = 'ur-PK-AsadNeural';
-  let selectedLanguage = 'urdu';
+// ── Char counter ──────────────────────────────────────────────────
+function updateCharCount(el) {
+  document.getElementById('charCount').textContent = el.value.length + ' chars';
+}
 
-  function switchLanguage(lang) {
-    selectedLanguage = lang;
-    document.getElementById('btn-urdu').classList.toggle('active', lang === 'urdu');
-    document.getElementById('btn-sindhi').classList.toggle('active', lang === 'sindhi');
-    selectedVoice = 'ur-PK-AsadNeural';
-    document.getElementById('voice-male').classList.add('selected');
-    document.getElementById('voice-female').classList.remove('selected');
-    document.getElementById('voiceResult').style.display = 'none';
-    document.getElementById('voiceStatus').textContent = '';
-  }
+// ── Slider display ────────────────────────────────────────────────
+function updateSlider(el, labelId, unit, neutralLabel) {
+  const v = parseInt(el.value);
+  const pct = ((v - el.min) / (el.max - el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+  const sign = v > 0 ? '+' : '';
+  const label = v === 0 ? `${neutralLabel} (0${unit})` : `${sign}${v}${unit}`;
+  document.getElementById(labelId).textContent = label;
+}
+document.querySelectorAll('input[type=range]').forEach(el => {
+  const pct = ((el.value - el.min) / (el.max - el.min)) * 100;
+  el.style.setProperty('--pct', pct + '%');
+});
 
-  function selectVoice(voice, el) {
-    selectedVoice = voice;
-    document.querySelectorAll('.voice-option').forEach(e => e.classList.remove('selected'));
-    el.classList.add('selected');
-  }
-
-  function updateRate() {
-    const val = document.getElementById('rate').value;
-    document.getElementById('rateVal').textContent = val == 0 ? 'Normal' : (val > 0 ? '+' + val + '%' : val + '%');
-  }
-
-  function updatePitch() {
-    const val = document.getElementById('pitch').value;
-    document.getElementById('pitchVal').textContent = val == 0 ? 'Normal' : (val > 0 ? '+' + val + 'Hz' : val + 'Hz');
-  }
-
-  async function generate() {
-    const text = document.getElementById('inputText').value.trim();
-    const rate = document.getElementById('rate').value;
-    const pitch = document.getElementById('pitch').value;
-    const btn = document.getElementById('generateBtn');
-    const status = document.getElementById('voiceStatus');
-
-    if (!text) return alert('Please enter some text!');
-
-    btn.disabled = true;
-    btn.textContent = '⏳ Processing...';
-    status.textContent = 'Translating and generating audio...';
-    document.getElementById('voiceResult').style.display = 'none';
-
-    const formData = new FormData();
-    formData.append('text', text);
-    formData.append('voice', selectedVoice);
-    formData.append('rate', rate);
-    formData.append('pitch', pitch);
-    formData.append('language', selectedLanguage);
-
-    try {
-      const res = await fetch('/generate', { method: 'POST', body: formData });
-      const data = await res.json();
-      if (data.success) {
-        const langLabel = selectedLanguage === 'sindhi' ? 'سنڌي ترجمو' : 'اردو ترجمہ';
-        document.getElementById('resultBadge').textContent = langLabel;
-        document.getElementById('translatedText').textContent = data.translated_text;
-        document.getElementById('audioPlayer').src = data.audio_url;
-        document.getElementById('voiceResult').style.display = 'block';
-        const noteBox = document.getElementById('noteBox');
-        if (data.note) { noteBox.textContent = '✅ ' + data.note; noteBox.style.display = 'block'; }
-        else { noteBox.style.display = 'none'; }
-        document.getElementById('audioPlayer').play();
-        status.textContent = '✅ Done!';
-      } else {
-        status.innerHTML = '<span class="error">❌ ' + data.error + '</span>';
-      }
-    } catch (e) {
-      status.innerHTML = '<span class="error">❌ ' + e.message + '</span>';
+// ── Progress simulation ───────────────────────────────────────────
+let progressInterval;
+function startProgress() {
+  const bar   = document.getElementById('progressBar');
+  const steps = ['step0','step1','step2','step3'];
+  const wrap  = document.getElementById('progressWrap');
+  wrap.classList.add('show');
+  bar.style.width = '0%';
+  steps.forEach(s => document.getElementById(s).className = 'step');
+  let pct = 0; let stepIdx = 0;
+  const targets = [20, 50, 75, 95];
+  document.getElementById(steps[0]).classList.add('active');
+  progressInterval = setInterval(() => {
+    if (pct < targets[stepIdx]) { pct += 1.2; bar.style.width = Math.min(pct, 98) + '%'; }
+    if (pct >= targets[stepIdx] && stepIdx < steps.length - 1) {
+      document.getElementById(steps[stepIdx]).className = 'step done';
+      stepIdx++;
+      document.getElementById(steps[stepIdx]).classList.add('active');
     }
-    btn.disabled = false;
-    btn.textContent = '🔊 Generate Voice';
+  }, 120);
+}
+function finishProgress() {
+  clearInterval(progressInterval);
+  document.getElementById('progressBar').style.width = '100%';
+  document.querySelectorAll('.step').forEach(s => { s.className = 'step done'; });
+  setTimeout(() => { document.getElementById('progressWrap').classList.remove('show'); }, 800);
+}
+
+// ── Custom audio player ───────────────────────────────────────────
+function createAudioPlayer(url, cardId) {
+  const audio = new Audio(url);
+  audioPool[cardId] = audio;
+  const playBtn = document.getElementById('play-' + cardId);
+  const fill    = document.getElementById('fill-' + cardId);
+  const curTime = document.getElementById('cur-' + cardId);
+  const durTime = document.getElementById('dur-' + cardId);
+  const track   = document.getElementById('track-' + cardId);
+  function fmt(s) {
+    const m = Math.floor(s/60), sec = Math.floor(s%60);
+    return m + ':' + (sec < 10 ? '0' : '') + sec;
   }
-
-  // ── Transcriber ──
-  const dropZone      = document.getElementById('dropZone');
-  const videoInput    = document.getElementById('videoInput');
-  const fileChosen    = document.getElementById('fileChosen');
-  const fileName      = document.getElementById('fileName');
-  const transcribeBtn = document.getElementById('transcribeBtn');
-  const progressWrap  = document.getElementById('progressWrap');
-  const progressLabel = document.getElementById('progressLabel');
-  const tStatusBar    = document.getElementById('tStatusBar');
-  const outputSection = document.getElementById('outputSection');
-  const transcriptBox = document.getElementById('transcriptBox');
-  const wordCount     = document.getElementById('wordCount');
-  const charCount     = document.getElementById('charCount');
-  const copyBtn       = document.getElementById('copyBtn');
-  const downloadBtn   = document.getElementById('downloadBtn');
-
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', e => {
-    e.preventDefault(); dropZone.classList.remove('dragover');
-    if (e.dataTransfer.files[0]) { window._droppedFile = e.dataTransfer.files[0]; handleFile(window._droppedFile); }
+  audio.addEventListener('loadedmetadata', () => { durTime.textContent = fmt(audio.duration); });
+  audio.addEventListener('timeupdate', () => {
+    if (!audio.duration) return;
+    fill.style.width = (audio.currentTime / audio.duration * 100) + '%';
+    curTime.textContent = fmt(audio.currentTime);
   });
-
-  videoInput.addEventListener('change', () => { if (videoInput.files[0]) handleFile(videoInput.files[0]); });
-
-  function handleFile(file) {
-    fileName.textContent = file.name;
-    fileChosen.classList.add('show');
-    transcribeBtn.disabled = false;
-    transcribeBtn.textContent = '✨ Transcribe Now';
-    tStatusBar.className = 't-status-bar';
-    outputSection.classList.remove('show');
-  }
-
-  transcribeBtn.addEventListener('click', async () => {
-    const file = videoInput.files[0] || window._droppedFile;
-    if (!file) return;
-
-    transcribeBtn.disabled = true;
-    transcribeBtn.textContent = 'Transcribing...';
-    progressWrap.classList.add('show');
-    tStatusBar.className = 't-status-bar';
-    outputSection.classList.remove('show');
-
-    const dots = ['Processing audio...', 'Running Whisper model...', 'Almost there...', 'Finalizing...'];
-    let di = 0;
-    const dotInterval = setInterval(() => { progressLabel.textContent = '⏳ ' + dots[di++ % dots.length]; }, 3500);
-
-    try {
-      const formData = new FormData();
-      formData.append('video', file);
-      const res = await fetch('/transcribe', { method: 'POST', body: formData });
-      const data = await res.json();
-      clearInterval(dotInterval);
-      progressWrap.classList.remove('show');
-
-      if (data.transcript) {
-        const text = data.transcript.trim();
-        transcriptBox.textContent = text;
-        wordCount.textContent = text.split(/\s+/).filter(Boolean).length.toLocaleString();
-        charCount.textContent = text.length.toLocaleString();
-        outputSection.classList.add('show');
-        tStatusBar.innerHTML = '✅ Transcription complete!';
-        tStatusBar.className = 't-status-bar success show';
-      } else {
-        tStatusBar.innerHTML = '❌ ' + (data.error || 'Something went wrong.');
-        tStatusBar.className = 't-status-bar error show';
+  audio.addEventListener('ended', () => {
+    playBtn.innerHTML = '▶'; playBtn.classList.remove('playing');
+    fill.style.width = '0%'; curTime.textContent = '0:00';
+  });
+  playBtn.addEventListener('click', () => {
+    Object.entries(audioPool).forEach(([id, a]) => {
+      if (id !== cardId && !a.paused) {
+        a.pause();
+        const btn = document.getElementById('play-' + id);
+        if (btn) { btn.innerHTML = '▶'; btn.classList.remove('playing'); }
       }
-    } catch (err) {
-      clearInterval(dotInterval);
-      progressWrap.classList.remove('show');
-      tStatusBar.innerHTML = '❌ Network error: ' + err.message;
-      tStatusBar.className = 't-status-bar error show';
-    }
-
-    transcribeBtn.disabled = false;
-    transcribeBtn.textContent = '✨ Transcribe Again';
-  });
-
-  copyBtn.addEventListener('click', () => {
-    navigator.clipboard.writeText(transcriptBox.textContent).then(() => {
-      copyBtn.textContent = 'Copied!';
-      setTimeout(() => copyBtn.textContent = 'Copy', 2000);
     });
+    if (audio.paused) { audio.play(); playBtn.innerHTML = '⏸'; playBtn.classList.add('playing'); }
+    else { audio.pause(); playBtn.innerHTML = '▶'; playBtn.classList.remove('playing'); }
   });
+  track.addEventListener('click', (e) => {
+    const rect = track.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * audio.duration;
+  });
+}
 
-  downloadBtn.addEventListener('click', () => {
-    const blob = new Blob([transcriptBox.textContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'transcript.txt'; a.click();
-    URL.revokeObjectURL(url);
+// ── Build voice card HTML ─────────────────────────────────────────
+function buildVoiceCard(voice, idx, isBest) {
+  const id = 'v' + idx;
+  const engine = voice.engine || 'edge';
+  const label  = voice.label  || voice.engine;
+  const audioUrl = voice.audio_url;
+  const icons = { elevenlabs: '🎵', google: '🔊', edge: '💠' };
+  const icon  = icons[engine] || '🔊';
+  const card = document.createElement('div');
+  card.className = 'voice-card' + (isBest ? ' best' : '');
+  card.style.animationDelay = (idx * 0.08) + 's';
+  card.innerHTML = `
+    <div class="voice-card-header">
+      <div class="voice-info">
+        <div class="engine-badge ${engine}">${icon}</div>
+        <div>
+          <div class="voice-name">${label}</div>
+          <span class="voice-engine-tag ${engine}">${engine.charAt(0).toUpperCase()+engine.slice(1)}</span>
+        </div>
+      </div>
+      ${isBest ? '<div class="best-tag">⭐ Best</div>' : ''}
+    </div>
+    <div class="audio-player">
+      <button class="play-btn" id="play-${id}">▶</button>
+      <div class="audio-progress">
+        <div class="progress-track" id="track-${id}">
+          <div class="progress-fill" id="fill-${id}"></div>
+        </div>
+        <div class="time-row">
+          <span id="cur-${id}">0:00</span>
+          <span id="dur-${id}">--:--</span>
+        </div>
+      </div>
+      <a href="${audioUrl}" download="urdu-voice-${engine}-${idx+1}.mp3">
+        <button class="download-btn" title="Download MP3">⬇</button>
+      </a>
+    </div>`;
+  return { card, id, audioUrl };
+}
+
+// ── Pipeline display ──────────────────────────────────────────────
+const STAGE_LABELS = {
+  stage_0_google:       { label: 'Google Translate',    color: '#36d98e' },
+  stage_1_transliterate:{ label: 'Transliteration Fix', color: '#00d2c8' },
+  stage_2_naturalized:  { label: 'AI Naturalization',   color: '#a78bfa' },
+  stage_3_tts_ready:    { label: 'TTS Optimization',    color: '#f5c842' },
+  stage_4_final:        { label: 'Final Clean Text',    color: '#f5c842' },
+};
+function renderPipeline(stages) {
+  const container = document.getElementById('pipelineSteps');
+  container.innerHTML = '';
+  let i = 1;
+  Object.entries(stages).forEach(([key, text]) => {
+    if (!text || !text.trim()) return;
+    const meta = STAGE_LABELS[key] || { label: key, color: '#7a8ba8' };
+    const step = document.createElement('div');
+    step.className = 'pipeline-step';
+    step.innerHTML = `
+      <div class="pipeline-step-label" style="color:${meta.color}">
+        <div class="num">${i++}</div>${meta.label}
+      </div>
+      <div class="pipeline-step-text">${text}</div>`;
+    container.appendChild(step);
   });
+  document.getElementById('pipelineSection').classList.add('show');
+}
+function togglePipeline() {
+  const toggle = document.getElementById('pipelineToggle');
+  const steps  = document.getElementById('pipelineSteps');
+  const open   = steps.classList.toggle('open');
+  toggle.classList.toggle('open', open);
+  toggle.innerHTML = toggle.innerHTML.replace(/Show|Hide/, open ? 'Hide' : 'Show');
+}
+
+// ── MAIN: Generate ────────────────────────────────────────────────
+async function generate() {
+  const text = document.getElementById('inputText').value.trim();
+  if (!text) { showError('Please enter some text first!'); return; }
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Generating...`;
+  hideError();
+  document.getElementById('urduPreview').classList.remove('show');
+  document.getElementById('resultsSection').classList.remove('show');
+  document.getElementById('pipelineSection').classList.remove('show');
+  document.getElementById('voiceGrid').innerHTML = '';
+  startProgress();
+  const body = new FormData();
+  body.append('text',  text);
+  body.append('lang',  document.getElementById('langSelect').value);
+  body.append('rate',  document.getElementById('rateSlider').value);
+  body.append('pitch', document.getElementById('pitchSlider').value);
+  try {
+    const resp = await fetch('/generate', { method: 'POST', body });
+    const data = await resp.json();
+    finishProgress();
+    if (!data.success) { showError(data.error || 'Generation failed. Check your API keys and try again.'); return; }
+    const urduText = data.final_text || data.translated_text || '';
+    if (urduText) {
+      document.getElementById('urduText').textContent = urduText;
+      document.getElementById('urduPreview').classList.add('show');
+    }
+    const grid = document.getElementById('voiceGrid');
+    let voices = data.voices || [];
+    if (voices.length === 0 && data.audio_url) {
+      voices = [{ engine: 'edge', label: 'Microsoft Edge TTS — Pakistani Urdu', audio_url: data.audio_url }];
+    }
+    document.getElementById('voiceCount').textContent = voices.length;
+    voices.forEach((voice, idx) => {
+      const { card, id, audioUrl } = buildVoiceCard(voice, idx, idx === 0);
+      grid.appendChild(card);
+      setTimeout(() => createAudioPlayer(audioUrl, id), 50);
+    });
+    document.getElementById('resultsSection').classList.add('show');
+    if (data.pipeline && Object.keys(data.pipeline).length > 0) renderPipeline(data.pipeline);
+    setTimeout(() => {
+      document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 200);
+  } catch (err) {
+    finishProgress();
+    showError('Network error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg> Generate Urdu Audio`;
+  }
+}
+
+function showError(msg) {
+  document.getElementById('errorText').textContent = msg;
+  document.getElementById('errorMsg').classList.add('show');
+}
+function hideError() { document.getElementById('errorMsg').classList.remove('show'); }
+
+document.addEventListener('keydown', e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') generate();
+});
+
+const style = document.createElement('style');
+style.textContent = '@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }';
+document.head.appendChild(style);
+
+// ═══════════════════════════════════════════════════════════
+// TRANSCRIBE TOGGLE
+// ═══════════════════════════════════════════════════════════
+function toggleTranscribeSection() {
+  const btn        = document.getElementById('transcribeToggleBtn');
+  const collapsible = document.getElementById('transcribeCollapsible');
+  const isOpen     = collapsible.classList.toggle('open');
+  btn.classList.toggle('active', isOpen);
+
+  if (isOpen) {
+    // Scroll to it smoothly after a small delay for the animation
+    setTimeout(() => {
+      collapsible.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 150);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+// TRANSCRIBE LOGIC
+// ═══════════════════════════════════════════════════════════
+let selectedFile = null;
+
+function handleFileSelect(input) {
+  if (input.files && input.files[0]) {
+    selectedFile = input.files[0];
+    showSelectedFile(selectedFile.name);
+  }
+}
+function handleDragOver(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.add('drag-over');
+}
+function handleDragLeave(e) {
+  document.getElementById('uploadZone').classList.remove('drag-over');
+}
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('uploadZone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    selectedFile = file;
+    document.getElementById('videoFile').files = e.dataTransfer.files;
+    showSelectedFile(file.name);
+  }
+}
+function showSelectedFile(name) {
+  document.getElementById('fileNameText').textContent = name;
+  document.getElementById('fileNameDisplay').classList.add('show');
+  document.getElementById('transcribeBtn').disabled = false;
+  document.getElementById('transcriptResult').classList.remove('show');
+  document.getElementById('transcribeError').classList.remove('show');
+}
+
+async function transcribe() {
+  if (!selectedFile) return;
+  const btn = document.getElementById('transcribeBtn');
+  btn.disabled = true;
+  btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="animation:spin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Transcribing...`;
+  document.getElementById('transcriptResult').classList.remove('show');
+  document.getElementById('transcribeError').classList.remove('show');
+  const formData = new FormData();
+  formData.append('video', selectedFile);
+  try {
+    const resp = await fetch('/transcribe', { method: 'POST', body: formData });
+    const data = await resp.json();
+    if (data.error) {
+      document.getElementById('transcribeErrorText').textContent = data.error;
+      document.getElementById('transcribeError').classList.add('show');
+    } else {
+      document.getElementById('transcriptText').textContent = data.transcript || '(No speech detected)';
+      document.getElementById('transcriptResult').classList.add('show');
+      document.getElementById('transcriptResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  } catch (err) {
+    document.getElementById('transcribeErrorText').textContent = 'Network error: ' + err.message;
+    document.getElementById('transcribeError').classList.add('show');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg> Transcribe with Whisper AI`;
+  }
+}
+
+function copyTranscript() {
+  const text = document.getElementById('transcriptText').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyTranscriptBtn');
+    btn.textContent = '✔ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function downloadTranscript() {
+  const text = document.getElementById('transcriptText').textContent;
+  if (!text) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'transcript.txt';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function useTranscriptForTTS() {
+  const transcript = document.getElementById('transcriptText').textContent;
+  if (!transcript) return;
+  const textarea = document.getElementById('inputText');
+  textarea.value = transcript;
+  updateCharCount(textarea);
+  document.getElementById('inputText').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  textarea.style.borderColor = 'var(--teal)';
+  textarea.style.boxShadow = '0 0 0 3px rgba(0,210,200,0.2)';
+  setTimeout(() => { textarea.style.borderColor = ''; textarea.style.boxShadow = ''; }, 1500);
+}
+
+function copyTranscript() {
+  const text = document.getElementById('transcriptText').textContent;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyTranscriptBtn');
+    btn.textContent = '✔ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  }).catch(() => {
+    // Fallback for browsers that block clipboard
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    const btn = document.getElementById('copyTranscriptBtn');
+    btn.textContent = '✔ Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = '📋 Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+}
+
+function downloadTranscript() {
+  const text = document.getElementById('transcriptText').textContent;
+  if (!text) return;
+  const blob = new Blob([text], { type: 'text/plain' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'transcript.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(a.href);
+}
 </script>
 </body>
 </html>
