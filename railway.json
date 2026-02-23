@@ -1,0 +1,12 @@
+{
+  "build": {
+    "builder": "NIXPACKS"
+  },
+  "nixpacks": {
+    "phases": {
+      "setup": {
+        "nixPkgs": ["ffmpeg"]
+      }
+    }
+  }
+}
