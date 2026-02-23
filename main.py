@@ -1,7 +1,5 @@
 import os, sys, uuid, asyncio
-if 'whisper' in sys.modules:
-    del sys.modules['whisper']
-import whisper
+from faster_whisper import WhisperModel
 from flask import Flask, request, jsonify, send_file, render_template
 from deep_translator import GoogleTranslator
 import edge_tts
@@ -10,14 +8,13 @@ from moviepy import VideoFileClip
 app = Flask(__name__, template_folder=".")
 
 print("Loading Whisper model...")
-model = whisper.load_model("tiny")
+model = WhisperModel("tiny", device="cpu", compute_type="int8")
 print("Model ready!")
 
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# ── Voice Narrator ──
 @app.route("/generate", methods=["POST"])
 def generate():
     try:
@@ -44,12 +41,7 @@ def generate():
         token = uuid.uuid4().hex
         app.config[f"audio_{token}"] = output_file
         sindhi_note = "(Sindhi text narrated using Urdu voice)" if language == "sindhi" else ""
-        return jsonify({
-            "success": True,
-            "translated_text": translated_text,
-            "audio_url": f"/audio?t={token}",
-            "note": sindhi_note
-        })
+        return jsonify({"success": True, "translated_text": translated_text, "audio_url": f"/audio?t={token}", "note": sindhi_note})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
@@ -61,7 +53,6 @@ def audio():
         return "File not found", 404
     return send_file(filename, mimetype="audio/mpeg")
 
-# ── Transcriber ──
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
     if "video" not in request.files:
@@ -74,8 +65,9 @@ def transcribe():
         clip = VideoFileClip(video_path)
         clip.audio.write_audiofile(audio_path, logger=None)
         clip.close()
-        result = model.transcribe(audio_path)
-        return jsonify({"transcript": result["text"]})
+        segments, _ = model.transcribe(audio_path)
+        transcript = " ".join([s.text for s in segments])
+        return jsonify({"transcript": transcript})
     except Exception as e:
         return jsonify({"error": str(e)})
     finally:
