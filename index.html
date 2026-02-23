@@ -1,228 +1,576 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Urdu & Sindhi Voice Narrator</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PK AI Studio — Voice & Transcribe</title>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: 'Segoe UI', sans-serif;
-      background: linear-gradient(135deg, #1a1a2e, #16213e);
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0e0e14;
+      --surface: #16161f;
+      --surface2: #1e1e2a;
+      --border: #2c2c3e;
+      --accent: #a78bfa;
+      --accent2: #7c3aed;
+      --gold: #f0a500;
+      --orange: #ff6b35;
+      --text: #f0ede8;
+      --muted: #6b6878;
+      --success: #4ade80;
+      --error: #f87171;
+    }
+
+    html, body {
       min-height: 100vh;
-      display: flex;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      top: -300px; left: 50%;
+      transform: translateX(-50%);
+      width: 900px; height: 600px;
+      background: radial-gradient(ellipse, rgba(124,58,237,0.12) 0%, transparent 70%);
+      pointer-events: none; z-index: 0;
+    }
+
+    .wrapper {
+      position: relative; z-index: 1;
+      min-height: 100vh;
+      display: flex; flex-direction: column;
       align-items: center;
-      justify-content: center;
-      color: white;
+      padding: 48px 20px 80px;
     }
-    .card {
-      background: rgba(255,255,255,0.08);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.15);
-      border-radius: 20px;
-      padding: 40px;
-      width: 100%;
-      max-width: 580px;
-    }
-    h1 { font-size: 1.8rem; margin-bottom: 8px; color: #a78bfa; text-align: center; }
-    p.sub { color: #94a3b8; margin-bottom: 30px; font-size: 0.9rem; text-align: center; }
-    label { display: block; margin-bottom: 8px; color: #cbd5e1; font-size: 0.9rem; }
-    .lang-toggle {
-      display: flex;
-      border-radius: 50px;
-      border: 2px solid rgba(167,139,250,0.4);
-      overflow: hidden;
-      margin-bottom: 24px;
-    }
-    .lang-btn {
-      flex: 1;
-      padding: 12px;
+
+    /* ── Header ── */
+    header {
       text-align: center;
-      cursor: pointer;
-      font-size: 0.95rem;
-      font-weight: bold;
-      transition: all 0.3s;
-      color: #94a3b8;
+      margin-bottom: 40px;
+      animation: fadeDown 0.7s ease both;
     }
-    .lang-btn.active {
-      background: linear-gradient(135deg, #7c3aed, #a78bfa);
-      color: white;
-    }
-    textarea {
-      width: 100%;
-      padding: 14px;
-      border-radius: 12px;
-      border: 1px solid rgba(255,255,255,0.2);
-      background: rgba(255,255,255,0.05);
-      color: white;
-      font-size: 1rem;
+
+    .logo-row {
+      display: inline-flex; align-items: center; gap: 12px;
       margin-bottom: 20px;
-      resize: vertical;
-      min-height: 120px;
     }
-    textarea::placeholder { color: #64748b; }
-    button {
-      background: linear-gradient(135deg, #7c3aed, #a78bfa);
-      color: white;
+
+    .logo-icon {
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      box-shadow: 0 0 40px rgba(124,58,237,0.4);
+    }
+
+    .logo-name {
+      font-family: 'Syne', sans-serif;
+      font-size: 22px; font-weight: 800;
+      letter-spacing: -0.5px;
+      background: linear-gradient(135deg, var(--text), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    }
+
+    header h1 {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(36px, 6vw, 64px);
+      font-weight: 800; line-height: 1.05; letter-spacing: -2px;
+      background: linear-gradient(135deg, var(--text) 40%, var(--accent) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    header p {
+      color: var(--muted); font-size: 15px; font-weight: 300;
+    }
+
+    /* ── Tab Switcher ── */
+    .tab-bar {
+      display: flex; gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 50px;
+      padding: 6px;
+      margin-bottom: 36px;
+      animation: fadeDown 0.7s 0.1s ease both;
+    }
+
+    .tab-btn {
+      padding: 10px 28px;
+      border-radius: 50px;
       border: none;
-      padding: 14px;
-      border-radius: 50px;
-      font-size: 1rem;
+      background: transparent;
+      color: var(--muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
       cursor: pointer;
-      width: 100%;
-      transition: transform 0.2s, opacity 0.2s;
-      margin-bottom: 20px;
+      transition: all 0.25s;
     }
-    button:hover { opacity: 0.9; transform: scale(1.02); }
-    button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .voice-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 20px;
+
+    .tab-btn.active {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: white;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.4);
     }
-    .voice-option {
+
+    /* ── Pages ── */
+    .page { width: 100%; max-width: 620px; display: none; animation: fadeUp 0.4s ease both; }
+    .page.active { display: block; }
+
+    /* ── Shared Card ── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 40px 80px rgba(0,0,0,0.5);
+    }
+
+    .card-body { padding: 36px; }
+
+    label.field-label {
+      display: block; margin-bottom: 8px;
+      color: #cbd5e1; font-size: 0.85rem; font-weight: 500;
+    }
+
+    /* ── Lang Toggle ── */
+    .lang-toggle {
+      display: flex; border-radius: 50px;
       border: 2px solid rgba(167,139,250,0.3);
-      border-radius: 12px;
-      padding: 12px;
-      cursor: pointer;
-      transition: all 0.2s;
-      text-align: center;
+      overflow: hidden; margin-bottom: 24px;
     }
-    .voice-option:hover { border-color: #a78bfa; background: rgba(167,139,250,0.1); }
-    .voice-option.selected { border-color: #a78bfa; background: rgba(167,139,250,0.2); }
-    .voice-option .name { font-weight: bold; font-size: 0.95rem; }
-    .voice-option .desc { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+
+    .lang-btn {
+      flex: 1; padding: 11px; text-align: center;
+      cursor: pointer; font-size: 0.9rem; font-weight: 600;
+      transition: all 0.3s; color: var(--muted);
+    }
+
+    .lang-btn.active {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: white;
+    }
+
+    /* ── Voice Grid ── */
+    .voice-grid {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 10px; margin-bottom: 22px;
+    }
+
+    .voice-option {
+      border: 2px solid rgba(167,139,250,0.25);
+      border-radius: 12px; padding: 12px;
+      cursor: pointer; transition: all 0.2s; text-align: center;
+    }
+
+    .voice-option:hover { border-color: var(--accent); background: rgba(167,139,250,0.08); }
+    .voice-option.selected { border-color: var(--accent); background: rgba(167,139,250,0.15); }
+    .voice-option .vname { font-weight: 700; font-size: 0.95rem; }
+    .voice-option .vdesc { font-size: 0.75rem; color: var(--muted); margin-top: 3px; }
+
+    /* ── Sliders ── */
     .slider-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 8px;
+      display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
     }
-    .slider-label { color: #cbd5e1; font-size: 0.85rem; }
-    .slider-value { color: #a78bfa; font-size: 0.85rem; font-weight: bold; }
+
+    .slider-label { color: #cbd5e1; font-size: 0.83rem; }
+    .slider-value { color: var(--accent); font-size: 0.83rem; font-weight: 700; }
+
     input[type=range] {
-      width: 100%;
+      width: 100%; margin-bottom: 18px; accent-color: var(--accent);
+    }
+
+    /* ── Textarea ── */
+    textarea {
+      width: 100%; padding: 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: var(--text); font-family: 'DM Sans', sans-serif;
+      font-size: 0.95rem; margin-bottom: 20px;
+      resize: vertical; min-height: 110px;
+    }
+
+    textarea::placeholder { color: #4a4a5a; }
+
+    /* ── Buttons ── */
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: white; border: none;
+      padding: 14px; border-radius: 50px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 500;
+      cursor: pointer; width: 100%;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.3);
       margin-bottom: 20px;
-      accent-color: #a78bfa;
     }
-    .result { display: none; }
-    .translated-text {
-      background: rgba(167,139,250,0.1);
-      border: 1px solid rgba(167,139,250,0.3);
-      border-radius: 10px;
-      padding: 14px;
-      margin-bottom: 15px;
-      font-size: 1.1rem;
-      line-height: 1.8;
-      direction: rtl;
-      text-align: right;
+
+    .btn-primary:hover:not(:disabled) {
+      opacity: 0.9; transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(124,58,237,0.5);
     }
-    audio { width: 100%; border-radius: 10px; margin-bottom: 10px; }
-    .status { text-align: center; margin-top: 10px; color: #94a3b8; font-size: 0.85rem; }
-    .error { color: #f87171; }
+
+    .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* ── Voice Result ── */
+    .voice-result { display: none; }
+
+    .translated-box {
+      background: rgba(167,139,250,0.08);
+      border: 1px solid rgba(167,139,250,0.25);
+      border-radius: 10px; padding: 14px;
+      margin-bottom: 14px;
+      font-size: 1.1rem; line-height: 1.9;
+      direction: rtl; text-align: right;
+    }
+
     .lang-badge {
       display: inline-block;
-      background: rgba(167,139,250,0.2);
-      border: 1px solid rgba(167,139,250,0.4);
-      border-radius: 20px;
-      padding: 3px 10px;
-      font-size: 0.75rem;
-      color: #a78bfa;
+      background: rgba(167,139,250,0.15);
+      border: 1px solid rgba(167,139,250,0.35);
+      border-radius: 20px; padding: 3px 12px;
+      font-size: 0.75rem; color: var(--accent);
       margin-bottom: 8px;
     }
-    .info-box {
-      background: rgba(251,191,36,0.1);
-      border: 1px solid rgba(251,191,36,0.3);
-      border-radius: 10px;
-      padding: 10px 14px;
-      font-size: 0.8rem;
-      color: #fbbf24;
-      margin-bottom: 20px;
-      display: none;
-    }
+
+    audio { width: 100%; border-radius: 10px; margin-bottom: 8px; }
+
     .note-box {
-      background: rgba(52,211,153,0.1);
-      border: 1px solid rgba(52,211,153,0.3);
-      border-radius: 8px;
-      padding: 8px 12px;
-      font-size: 0.78rem;
-      color: #34d399;
-      margin-top: 8px;
-      display: none;
+      background: rgba(74,222,128,0.08);
+      border: 1px solid rgba(74,222,128,0.25);
+      border-radius: 8px; padding: 8px 12px;
+      font-size: 0.78rem; color: var(--success);
+      margin-top: 6px; display: none;
+    }
+
+    .status { text-align: center; margin-top: 8px; color: var(--muted); font-size: 0.83rem; }
+    .error { color: var(--error); }
+
+    /* ── Transcriber ── */
+    .drop-zone {
+      padding: 44px 36px;
+      border-bottom: 1px solid var(--border);
+      position: relative; cursor: pointer; transition: background 0.3s;
+    }
+
+    .drop-zone:hover, .drop-zone.dragover { background: var(--surface2); }
+    .drop-zone.dragover { outline: 2px solid var(--gold); }
+
+    .drop-zone input[type="file"] {
+      position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+    }
+
+    .drop-inner {
+      display: flex; flex-direction: column; align-items: center; gap: 12px;
+      pointer-events: none;
+    }
+
+    .drop-icon {
+      width: 62px; height: 62px;
+      border: 2px dashed var(--border);
+      border-radius: 16px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; background: var(--surface2);
+      transition: border-color 0.3s, transform 0.3s;
+    }
+
+    .drop-zone:hover .drop-icon, .drop-zone.dragover .drop-icon {
+      border-color: var(--gold); transform: scale(1.05);
+    }
+
+    .drop-title { font-size: 16px; font-weight: 500; }
+    .drop-sub { font-size: 12px; color: var(--muted); font-family: 'DM Mono', monospace; }
+
+    .file-chosen {
+      display: none; align-items: center; gap: 10px;
+      background: var(--surface2);
+      border: 1px solid var(--gold);
+      border-radius: 10px; padding: 10px 14px;
+      margin-top: 14px; pointer-events: none;
+    }
+
+    .file-chosen.show { display: flex; }
+    .file-chosen-name { font-family: 'DM Mono', monospace; font-size: 12px; color: var(--gold); }
+
+    .t-actions { padding: 24px 36px; border-bottom: 1px solid var(--border); }
+
+    .btn-transcribe {
+      width: 100%; padding: 15px;
+      background: linear-gradient(135deg, var(--gold), var(--orange));
+      color: #0d0d0f; font-family: 'DM Sans', sans-serif;
+      font-size: 15px; font-weight: 600;
+      border: none; border-radius: 12px; cursor: pointer;
+      transition: opacity 0.2s, transform 0.15s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(240,165,0,0.3);
+    }
+
+    .btn-transcribe:hover:not(:disabled) {
+      opacity: 0.92; transform: translateY(-1px);
+      box-shadow: 0 8px 30px rgba(240,165,0,0.45);
+    }
+
+    .btn-transcribe:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .progress-wrap { display: none; margin-top: 14px; }
+    .progress-wrap.show { display: block; }
+
+    .progress-bar-bg {
+      height: 3px; background: var(--border); border-radius: 99px; overflow: hidden;
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--orange));
+      border-radius: 99px; width: 0%;
+      animation: progressAnim 2.5s ease-in-out infinite;
+    }
+
+    @keyframes progressAnim {
+      0%   { width: 0%;  margin-left: 0; }
+      50%  { width: 70%; margin-left: 0; }
+      100% { width: 0%;  margin-left: 100%; }
+    }
+
+    .progress-label {
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--muted); margin-top: 10px; text-align: center;
+    }
+
+    .t-status-bar {
+      display: none; align-items: center; gap: 10px;
+      padding: 10px 14px; border-radius: 10px;
+      margin-top: 12px; font-size: 13px;
+    }
+
+    .t-status-bar.show { display: flex; }
+    .t-status-bar.success { background: rgba(74,222,128,0.08); color: var(--success); border: 1px solid rgba(74,222,128,0.2); }
+    .t-status-bar.error   { background: rgba(248,113,113,0.08); color: var(--error);   border: 1px solid rgba(248,113,113,0.2); }
+
+    .output-section { padding: 28px 36px; display: none; }
+    .output-section.show { display: block; animation: fadeUp 0.4s ease both; }
+
+    .output-header {
+      display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px;
+    }
+
+    .output-label {
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+    }
+
+    .output-actions { display: flex; gap: 8px; }
+
+    .btn-small {
+      padding: 6px 14px; border-radius: 8px; font-size: 12px;
+      font-family: 'DM Mono', monospace; cursor: pointer;
+      border: 1px solid var(--border); background: var(--surface2);
+      color: var(--text); transition: all 0.2s;
+    }
+
+    .btn-small:hover { border-color: var(--gold); color: var(--gold); }
+
+    .transcript-box {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 12px; padding: 22px;
+      font-family: 'DM Sans', sans-serif; font-size: 15px; line-height: 1.8;
+      color: var(--text); min-height: 160px; max-height: 360px;
+      overflow-y: auto; white-space: pre-wrap; word-break: break-word; resize: vertical;
+    }
+
+    .transcript-box::-webkit-scrollbar { width: 5px; }
+    .transcript-box::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+    .stats-row { display: flex; gap: 12px; margin-top: 12px; }
+
+    .stat-chip {
+      font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted);
+      background: var(--surface2); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 6px;
+    }
+
+    .stat-chip span { color: var(--gold); font-weight: 500; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 44px; text-align: center;
+      font-family: 'DM Mono', monospace; font-size: 11px;
+      color: var(--muted); letter-spacing: 1px;
+      animation: fadeUp 0.8s 0.4s ease both;
+    }
+
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* ── Animations ── */
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @media (max-width: 580px) {
+      .card-body, .drop-zone, .t-actions, .output-section { padding-left: 20px; padding-right: 20px; }
     }
   </style>
 </head>
 <body>
-<div class="card">
-  <h1>🎙️ Voice Narrator</h1>
-  <p class="sub">Translate & narrate in Urdu or Sindhi</p>
+<div class="wrapper">
 
-  <label>Select Language</label>
-  <div class="lang-toggle">
-    <div class="lang-btn active" id="btn-urdu" onclick="switchLanguage('urdu')">🇵🇰 Urdu (اردو)</div>
-    <div class="lang-btn" id="btn-sindhi" onclick="switchLanguage('sindhi')">🌊 Sindhi (سنڌي)</div>
-  </div>
-
-  <!-- Shared voice options (same voices work for both) -->
-  <label>Choose Voice</label>
-  <div class="voice-grid">
-    <div class="voice-option selected" id="voice-male" onclick="selectVoice('ur-PK-AsadNeural', this)">
-      <div class="name">👨 Asad</div>
-      <div class="desc" id="desc-male">Pakistani Male</div>
+  <header>
+    <div class="logo-row">
+      <div class="logo-icon">🇵🇰</div>
+      <span class="logo-name">PK AI Studio</span>
     </div>
-    <div class="voice-option" id="voice-female" onclick="selectVoice('ur-PK-UzmaNeural', this)">
-      <div class="name">👩 Uzma</div>
-      <div class="desc" id="desc-female">Pakistani Female</div>
+    <h1>Voice & Transcribe</h1>
+    <p>Translate to Urdu/Sindhi · Narrate · Transcribe any video</p>
+  </header>
+
+  <!-- Tab Bar -->
+  <div class="tab-bar">
+    <button class="tab-btn active" id="tab-voice" onclick="showTab('voice')">🎙️ Voice Narrator</button>
+    <button class="tab-btn" id="tab-transcript" onclick="showTab('transcript')">📝 Transcriber</button>
+  </div>
+
+  <!-- ══ VOICE PAGE ══ -->
+  <div class="page active" id="page-voice">
+    <div class="card">
+      <div class="card-body">
+
+        <label class="field-label">Select Language</label>
+        <div class="lang-toggle">
+          <div class="lang-btn active" id="btn-urdu" onclick="switchLanguage('urdu')">🇵🇰 Urdu (اردو)</div>
+          <div class="lang-btn" id="btn-sindhi" onclick="switchLanguage('sindhi')">🌊 Sindhi (سنڌي)</div>
+        </div>
+
+        <label class="field-label">Choose Voice</label>
+        <div class="voice-grid">
+          <div class="voice-option selected" id="voice-male" onclick="selectVoice('ur-PK-AsadNeural', this)">
+            <div class="vname">👨 Asad</div>
+            <div class="vdesc">Pakistani Male</div>
+          </div>
+          <div class="voice-option" id="voice-female" onclick="selectVoice('ur-PK-UzmaNeural', this)">
+            <div class="vname">👩 Uzma</div>
+            <div class="vdesc">Pakistani Female</div>
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <span class="slider-label">🐢 Speed</span>
+          <span class="slider-value" id="rateVal">Normal</span>
+        </div>
+        <input type="range" id="rate" min="-50" max="50" value="0" oninput="updateRate()">
+
+        <div class="slider-row">
+          <span class="slider-label">🎵 Pitch</span>
+          <span class="slider-value" id="pitchVal">Normal</span>
+        </div>
+        <input type="range" id="pitch" min="-50" max="50" value="0" oninput="updatePitch()">
+
+        <label class="field-label">Enter Text (any language)</label>
+        <textarea id="inputText" placeholder="Type anything here and it will be translated..."></textarea>
+
+        <button class="btn-primary" id="generateBtn" onclick="generate()">🔊 Generate Voice</button>
+
+        <div class="voice-result" id="voiceResult">
+          <div class="lang-badge" id="resultBadge">Translation</div>
+          <div class="translated-box" id="translatedText"></div>
+          <audio id="audioPlayer" controls></audio>
+          <div class="note-box" id="noteBox"></div>
+        </div>
+
+        <div class="status" id="voiceStatus"></div>
+      </div>
     </div>
   </div>
 
-  <div class="slider-row">
-    <span class="slider-label">🐢 Speed</span>
-    <span class="slider-value" id="rateVal">Normal</span>
+  <!-- ══ TRANSCRIPT PAGE ══ -->
+  <div class="page" id="page-transcript">
+    <div class="card">
+
+      <!-- Drop Zone -->
+      <div class="drop-zone" id="dropZone">
+        <input type="file" id="videoInput" accept="video/*,audio/*" />
+        <div class="drop-inner">
+          <div class="drop-icon">🎬</div>
+          <div class="drop-title">Drop your video or audio here</div>
+          <div class="drop-sub">MP4 · MOV · AVI · MKV · MP3 · WAV</div>
+          <div class="file-chosen" id="fileChosen">
+            <span>📎</span>
+            <span class="file-chosen-name" id="fileName"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Transcribe Button -->
+      <div class="t-actions">
+        <button class="btn-transcribe" id="transcribeBtn" disabled>Choose a file to begin</button>
+        <div class="progress-wrap" id="progressWrap">
+          <div class="progress-bar-bg"><div class="progress-bar-fill"></div></div>
+          <div class="progress-label" id="progressLabel">⏳ Processing...</div>
+        </div>
+        <div class="t-status-bar" id="tStatusBar"></div>
+      </div>
+
+      <!-- Output -->
+      <div class="output-section" id="outputSection">
+        <div class="output-header">
+          <span class="output-label">Transcript</span>
+          <div class="output-actions">
+            <button class="btn-small" id="copyBtn">Copy</button>
+            <button class="btn-small" id="downloadBtn">Download .txt</button>
+          </div>
+        </div>
+        <div class="transcript-box" id="transcriptBox"></div>
+        <div class="stats-row">
+          <div class="stat-chip">Words: <span id="wordCount">0</span></div>
+          <div class="stat-chip">Chars: <span id="charCount">0</span></div>
+        </div>
+      </div>
+
+    </div>
   </div>
-  <input type="range" id="rate" min="-50" max="50" value="0" oninput="updateRate()">
 
-  <div class="slider-row">
-    <span class="slider-label">🎵 Pitch</span>
-    <span class="slider-value" id="pitchVal">Normal</span>
-  </div>
-  <input type="range" id="pitch" min="-50" max="50" value="0" oninput="updatePitch()">
+  <footer>
+    Powered by <a href="https://github.com/openai/whisper" target="_blank">OpenAI Whisper</a> &
+    <a href="https://azure.microsoft.com/en-us/products/cognitive-services/text-to-speech/" target="_blank">Edge TTS</a>
+    · No data stored
+  </footer>
 
-  <label>Enter Text (any language)</label>
-  <textarea id="inputText" placeholder="Type anything here and it will be translated..."></textarea>
-
-  <button id="generateBtn" onclick="generate()">🔊 Generate Voice</button>
-
-  <div class="result" id="result">
-    <div class="lang-badge" id="resultBadge">Translation</div>
-    <div class="translated-text" id="translatedText"></div>
-    <audio id="audioPlayer" controls></audio>
-    <div class="note-box" id="noteBox"></div>
-  </div>
-  <div class="status" id="status"></div>
 </div>
 
 <script>
+  // ── Tab switching ──
+  function showTab(tab) {
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('page-' + tab).classList.add('active');
+    document.getElementById('tab-' + tab).classList.add('active');
+  }
+
+  // ── Voice Narrator ──
   let selectedVoice = 'ur-PK-AsadNeural';
   let selectedLanguage = 'urdu';
 
   function switchLanguage(lang) {
     selectedLanguage = lang;
-
     document.getElementById('btn-urdu').classList.toggle('active', lang === 'urdu');
     document.getElementById('btn-sindhi').classList.toggle('active', lang === 'sindhi');
-
-    // Show/hide Sindhi info box
-    document.getElementById('sindhi-info').style.display = lang === 'sindhi' ? 'block' : 'none';
-
-    // Reset to male voice on switch
     selectedVoice = 'ur-PK-AsadNeural';
     document.getElementById('voice-male').classList.add('selected');
     document.getElementById('voice-female').classList.remove('selected');
-
-    // Hide previous result
-    document.getElementById('result').style.display = 'none';
-    document.getElementById('status').textContent = '';
+    document.getElementById('voiceResult').style.display = 'none';
+    document.getElementById('voiceStatus').textContent = '';
   }
 
   function selectVoice(voice, el) {
@@ -246,14 +594,14 @@
     const rate = document.getElementById('rate').value;
     const pitch = document.getElementById('pitch').value;
     const btn = document.getElementById('generateBtn');
-    const status = document.getElementById('status');
+    const status = document.getElementById('voiceStatus');
 
     if (!text) return alert('Please enter some text!');
 
     btn.disabled = true;
     btn.textContent = '⏳ Processing...';
     status.textContent = 'Translating and generating audio...';
-    document.getElementById('result').style.display = 'none';
+    document.getElementById('voiceResult').style.display = 'none';
 
     const formData = new FormData();
     formData.append('text', text);
@@ -270,16 +618,10 @@
         document.getElementById('resultBadge').textContent = langLabel;
         document.getElementById('translatedText').textContent = data.translated_text;
         document.getElementById('audioPlayer').src = data.audio_url;
-        document.getElementById('result').style.display = 'block';
-
+        document.getElementById('voiceResult').style.display = 'block';
         const noteBox = document.getElementById('noteBox');
-        if (data.note) {
-          noteBox.textContent = '✅ ' + data.note;
-          noteBox.style.display = 'block';
-        } else {
-          noteBox.style.display = 'none';
-        }
-
+        if (data.note) { noteBox.textContent = '✅ ' + data.note; noteBox.style.display = 'block'; }
+        else { noteBox.style.display = 'none'; }
         document.getElementById('audioPlayer').play();
         status.textContent = '✅ Done!';
       } else {
@@ -291,6 +633,100 @@
     btn.disabled = false;
     btn.textContent = '🔊 Generate Voice';
   }
+
+  // ── Transcriber ──
+  const dropZone      = document.getElementById('dropZone');
+  const videoInput    = document.getElementById('videoInput');
+  const fileChosen    = document.getElementById('fileChosen');
+  const fileName      = document.getElementById('fileName');
+  const transcribeBtn = document.getElementById('transcribeBtn');
+  const progressWrap  = document.getElementById('progressWrap');
+  const progressLabel = document.getElementById('progressLabel');
+  const tStatusBar    = document.getElementById('tStatusBar');
+  const outputSection = document.getElementById('outputSection');
+  const transcriptBox = document.getElementById('transcriptBox');
+  const wordCount     = document.getElementById('wordCount');
+  const charCount     = document.getElementById('charCount');
+  const copyBtn       = document.getElementById('copyBtn');
+  const downloadBtn   = document.getElementById('downloadBtn');
+
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => {
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files[0]) { window._droppedFile = e.dataTransfer.files[0]; handleFile(window._droppedFile); }
+  });
+
+  videoInput.addEventListener('change', () => { if (videoInput.files[0]) handleFile(videoInput.files[0]); });
+
+  function handleFile(file) {
+    fileName.textContent = file.name;
+    fileChosen.classList.add('show');
+    transcribeBtn.disabled = false;
+    transcribeBtn.textContent = '✨ Transcribe Now';
+    tStatusBar.className = 't-status-bar';
+    outputSection.classList.remove('show');
+  }
+
+  transcribeBtn.addEventListener('click', async () => {
+    const file = videoInput.files[0] || window._droppedFile;
+    if (!file) return;
+
+    transcribeBtn.disabled = true;
+    transcribeBtn.textContent = 'Transcribing...';
+    progressWrap.classList.add('show');
+    tStatusBar.className = 't-status-bar';
+    outputSection.classList.remove('show');
+
+    const dots = ['Processing audio...', 'Running Whisper model...', 'Almost there...', 'Finalizing...'];
+    let di = 0;
+    const dotInterval = setInterval(() => { progressLabel.textContent = '⏳ ' + dots[di++ % dots.length]; }, 3500);
+
+    try {
+      const formData = new FormData();
+      formData.append('video', file);
+      const res = await fetch('/transcribe', { method: 'POST', body: formData });
+      const data = await res.json();
+      clearInterval(dotInterval);
+      progressWrap.classList.remove('show');
+
+      if (data.transcript) {
+        const text = data.transcript.trim();
+        transcriptBox.textContent = text;
+        wordCount.textContent = text.split(/\s+/).filter(Boolean).length.toLocaleString();
+        charCount.textContent = text.length.toLocaleString();
+        outputSection.classList.add('show');
+        tStatusBar.innerHTML = '✅ Transcription complete!';
+        tStatusBar.className = 't-status-bar success show';
+      } else {
+        tStatusBar.innerHTML = '❌ ' + (data.error || 'Something went wrong.');
+        tStatusBar.className = 't-status-bar error show';
+      }
+    } catch (err) {
+      clearInterval(dotInterval);
+      progressWrap.classList.remove('show');
+      tStatusBar.innerHTML = '❌ Network error: ' + err.message;
+      tStatusBar.className = 't-status-bar error show';
+    }
+
+    transcribeBtn.disabled = false;
+    transcribeBtn.textContent = '✨ Transcribe Again';
+  });
+
+  copyBtn.addEventListener('click', () => {
+    navigator.clipboard.writeText(transcriptBox.textContent).then(() => {
+      copyBtn.textContent = 'Copied!';
+      setTimeout(() => copyBtn.textContent = 'Copy', 2000);
+    });
+  });
+
+  downloadBtn.addEventListener('click', () => {
+    const blob = new Blob([transcriptBox.textContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'transcript.txt'; a.click();
+    URL.revokeObjectURL(url);
+  });
 </script>
 </body>
 </html>

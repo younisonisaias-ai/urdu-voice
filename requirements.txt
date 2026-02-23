@@ -1,0 +1,7 @@
+openai-whisper
+ffmpeg-python
+flask
+deep-translator
+edge-tts
+moviepy
+whisper
