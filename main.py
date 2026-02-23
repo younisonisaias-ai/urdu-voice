@@ -1,9 +1,8 @@
-import os, sys, uuid, asyncio
+import os, sys, uuid, asyncio, shutil
 from faster_whisper import WhisperModel
 from flask import Flask, request, jsonify, send_file, render_template
 from deep_translator import GoogleTranslator
 import edge_tts
-from moviepy import VideoFileClip
 
 app = Flask(__name__, template_folder=".")
 
@@ -56,22 +55,32 @@ def audio():
 @app.route("/transcribe", methods=["POST"])
 def transcribe():
     if "video" not in request.files:
-        return jsonify({"error": "No video uploaded"})
-    video_file = request.files["video"]
-    video_path = "uploaded_video.mp4"
-    audio_path = "extracted_audio.mp3"
-    video_file.save(video_path)
+        return jsonify({"error": "No file uploaded"})
+    
+    uploaded = request.files["video"]
+    filename = uploaded.filename.lower()
+    input_path = f"upload_{uuid.uuid4().hex}"
+    audio_path = input_path + ".wav"
+    
+    # Save uploaded file
+    ext = os.path.splitext(filename)[1]
+    raw_path = input_path + ext
+    uploaded.save(raw_path)
+    
     try:
-        clip = VideoFileClip(video_path)
-        clip.audio.write_audiofile(audio_path, logger=None)
-        clip.close()
+        # Convert to wav using ffmpeg (handles both audio and video)
+        os.system(f'ffmpeg -i "{raw_path}" -ar 16000 -ac 1 -c:a pcm_s16le "{audio_path}" -y -loglevel error')
+        
+        if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
+            return jsonify({"error": "Could not extract audio from file"})
+        
         segments, _ = model.transcribe(audio_path)
         transcript = " ".join([s.text for s in segments])
         return jsonify({"transcript": transcript})
     except Exception as e:
         return jsonify({"error": str(e)})
     finally:
-        if os.path.exists(video_path): os.remove(video_path)
+        if os.path.exists(raw_path): os.remove(raw_path)
         if os.path.exists(audio_path): os.remove(audio_path)
 
 if __name__ == "__main__":
