@@ -1,22 +1,20 @@
 import os
 import shutil
-import subprocess
-import uuid
-import asyncio
+
+# Force correct ffmpeg path detection
+ffmpeg_path = shutil.which("ffmpeg")
+if ffmpeg_path:
+    os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
+
+import os, sys, uuid, asyncio
 from faster_whisper import WhisperModel
 from flask import Flask, request, jsonify, send_file, render_template
 from deep_translator import GoogleTranslator
 import edge_tts
 
-# 1. SETUP SYSTEM PATHS FOR RAILWAY
-ffmpeg_exe = shutil.which("ffmpeg") or "/usr/bin/ffmpeg"
-os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_exe
-
 app = Flask(__name__, template_folder=".")
 
-# 2. LOAD MODEL
 print("Loading Whisper model...")
-# Using CPU and int8 for lower memory usage on Railway
 model = WhisperModel("tiny", device="cpu", compute_type="int8")
 print("Model ready!")
 
@@ -40,20 +38,19 @@ def split_text(text, max_chars=1000):
 @app.route("/generate", methods=["POST"])
 def generate():
     try:
-        text = request.form["text"]
-        voice = request.form["voice"]
-        rate = int(request.form.get("rate", 0))
-        pitch = int(request.form.get("pitch", 0))
+        text     = request.form["text"]
+        voice    = request.form["voice"]
+        rate     = int(request.form.get("rate", 0))
+        pitch    = int(request.form.get("pitch", 0))
         language = request.form.get("language", "urdu")
-
-        rate_str = f"{'+' if rate >= 0 else ''}{rate}%"
+        rate_str  = f"{'+' if rate  >= 0 else ''}{rate}%"
         pitch_str = f"{'+' if pitch >= 0 else ''}{pitch}Hz"
         target_lang = "ur" if language == "urdu" else "sd"
 
-        # Translation Logic
+        # Translate in chunks if text is long
         if len(text) > 4000:
             words = text.split()
-            parts = [' '.join(words[i:i + 500]) for i in range(0, len(words), 500)]
+            parts = [' '.join(words[i:i+500]) for i in range(0, len(words), 500)]
             translated_text = ' '.join([
                 GoogleTranslator(source="auto", target=target_lang).translate(p)
                 for p in parts
@@ -62,9 +59,9 @@ def generate():
             translated_text = GoogleTranslator(source="auto", target=target_lang).translate(text)
 
         if not translated_text or not translated_text.strip():
-            return jsonify({"success": False, "error": "Translation empty."}), 400
+            return jsonify({"success": False, "error": "Translation returned empty."}), 400
 
-        # TTS Logic
+        # Split translated text into chunks for TTS
         chunks = split_text(translated_text, max_chars=1000)
         chunk_files = []
 
@@ -77,51 +74,57 @@ def generate():
 
         asyncio.run(save_chunks())
 
-        # Combine Audio Chunks using the correct FFmpeg path
+        # Combine all chunks into one file
         output_file = f"/tmp/output_{uuid.uuid4().hex}.mp3"
+
         if len(chunk_files) == 1:
             os.rename(chunk_files[0], output_file)
         else:
+            import subprocess
+
             list_file = f"/tmp/list_{uuid.uuid4().hex}.txt"
+
             with open(list_file, "w") as f:
                 for cf in chunk_files:
                     f.write(f"file '{cf}'\n")
 
             subprocess.run([
-                ffmpeg_exe, "-f", "concat", "-safe", "0", 
-                "-i", list_file, "-c", "copy", output_file, "-y"
+                "ffmpeg",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_file,
+                "-c", "copy",
+                output_file,
+                "-y"
             ], check=True)
 
             os.remove(list_file)
-            for cf in chunk_files:
-                if os.path.exists(cf): os.remove(cf)
 
-        # Cleanup old tmp files
+            for cf in chunk_files:
+                if os.path.exists(cf):
+                    os.remove(cf)
+
+        # Cleanup old output files
         for f in os.listdir("/tmp"):
-            if f.startswith("output_") and f.endswith(".mp3"):
-                full_path = os.path.join("/tmp", f)
-                if full_path != output_file:
-                    try: os.remove(full_path)
-                    except: pass
+            full_path = os.path.join("/tmp", f)
+            if f.startswith("output_") and f.endswith(".mp3") and full_path != output_file:
+                try:
+                    os.remove(full_path)
+                except:
+                    pass
 
         token = uuid.uuid4().hex
         app.config[f"audio_{token}"] = output_file
         sindhi_note = "(Sindhi text narrated using Urdu voice)" if language == "sindhi" else ""
-
-        return jsonify({
-            "success": True, 
-            "translated_text": translated_text, 
-            "audio_url": f"/audio?t={token}", 
-            "note": sindhi_note
-        })
+        return jsonify({"success": True, "translated_text": translated_text, "audio_url": f"/audio?t={token}", "note": sindhi_note})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
 
 @app.route("/audio")
 def audio():
     token = request.args.get("t", "")
-    filename = app.config.get(f"audio_{token}")
-    if not filename or not os.path.exists(filename):
+    filename = app.config.get(f"audio_{token}", "output.mp3")
+    if not os.path.exists(filename):
         return "File not found", 404
     return send_file(filename, mimetype="audio/mpeg")
 
@@ -132,6 +135,7 @@ def transcribe():
 
     uploaded = request.files["video"]
     ext = os.path.splitext(uploaded.filename.lower())[1]
+
     base_id = uuid.uuid4().hex
     input_path = f"/tmp/upload_{base_id}{ext}"
     audio_path = f"/tmp/upload_{base_id}.wav"
@@ -139,22 +143,30 @@ def transcribe():
     uploaded.save(input_path)
 
     try:
-        # Extract Audio using FFmpeg
+        import subprocess
+
         ffmpeg_cmd = [
-            ffmpeg_exe, "-i", input_path, 
-            "-ar", "16000", "-ac", "1", "-c:a", "pcm_s16le", 
-            audio_path, "-y"
+            "ffmpeg",
+            "-i", input_path,
+            "-ar", "16000",
+            "-ac", "1",
+            "-c:a", "pcm_s16le",
+            audio_path,
+            "-y"
         ]
 
         result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
 
+        print("FFMPEG STDOUT:", result.stdout)
+        print("FFMPEG STDERR:", result.stderr)
+
         if result.returncode != 0:
-            return jsonify({"error": f"Audio extraction failed: {result.stderr}"})
+            return jsonify({"error": f"FFmpeg failed: {result.stderr}"})
 
         if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
-            return jsonify({"error": "Final audio file is empty."})
+            return jsonify({"error": "Audio file was not created properly"})
 
-        # Run Whisper Transcription
+        # Transcribe
         segments, _ = model.transcribe(audio_path)
         transcript = " ".join([s.text for s in segments])
 
@@ -164,11 +176,9 @@ def transcribe():
         return jsonify({"error": str(e)})
 
     finally:
-        # Final cleanup
-        if os.path.exists(input_path): os.remove(input_path)
-        if os.path.exists(audio_path): os.remove(audio_path)
-
+        if os.path.exists(input_path):
+            os.remove(input_path)
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
 if __name__ == "__main__":
-    # Important: Railway uses the PORT environment variable
-    port = int(os.environ.get("PORT", 8080))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=8080)
