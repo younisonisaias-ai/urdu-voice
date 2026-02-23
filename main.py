@@ -1,3 +1,11 @@
+import os
+import shutil
+
+# Force correct ffmpeg path detection
+ffmpeg_path = shutil.which("ffmpeg")
+if ffmpeg_path:
+    os.environ["IMAGEIO_FFMPEG_EXE"] = ffmpeg_path
+
 import os, sys, uuid, asyncio
 from faster_whisper import WhisperModel
 from flask import Flask, request, jsonify, send_file, render_template
@@ -106,23 +114,50 @@ def audio():
 def transcribe():
     if "video" not in request.files:
         return jsonify({"error": "No file uploaded"})
+
     uploaded = request.files["video"]
     ext = os.path.splitext(uploaded.filename.lower())[1]
     input_path = f"upload_{uuid.uuid4().hex}{ext}"
     audio_path = input_path.replace(ext, ".wav")
     uploaded.save(input_path)
+
     try:
-        os.system(f'ffmpeg -i "{input_path}" -ar 16000 -ac 1 -c:a pcm_s16le "{audio_path}" -y -loglevel error')
+        import subprocess
+
+        ffmpeg_cmd = [
+            "ffmpeg",
+            "-i", input_path,
+            "-ar", "16000",
+            "-ac", "1",
+            "-c:a", "pcm_s16le",
+            audio_path,
+            "-y"
+        ]
+
+        result = subprocess.run(ffmpeg_cmd, capture_output=True, text=True)
+
+        print("FFMPEG STDOUT:", result.stdout)
+        print("FFMPEG STDERR:", result.stderr)
+
+        if result.returncode != 0:
+            return jsonify({"error": f"FFmpeg failed: {result.stderr}"})
+
         if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
-            return jsonify({"error": "Could not extract audio from file"})
+            return jsonify({"error": "Audio file was not created properly"})
+
+        # 🔥 TRANSCRIBE HERE
         segments, _ = model.transcribe(audio_path)
         transcript = " ".join([s.text for s in segments])
+
         return jsonify({"transcript": transcript})
+
     except Exception as e:
         return jsonify({"error": str(e)})
-    finally:
-        if os.path.exists(input_path): os.remove(input_path)
-        if os.path.exists(audio_path): os.remove(audio_path)
 
+    finally:
+        if os.path.exists(input_path):
+            os.remove(input_path)
+        if os.path.exists(audio_path):
+            os.remove(audio_path)
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8080)
