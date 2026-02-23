@@ -66,34 +66,52 @@ def generate():
         chunk_files = []
 
         async def save_chunks():
-            for i, chunk in enumerate(chunks):
-                chunk_file = f"chunk_{uuid.uuid4().hex}.mp3"
+            for chunk in chunks:
+                chunk_file = f"/tmp/chunk_{uuid.uuid4().hex}.mp3"
                 communicate = edge_tts.Communicate(chunk, voice, rate=rate_str, pitch=pitch_str)
                 await communicate.save(chunk_file)
                 chunk_files.append(chunk_file)
 
         asyncio.run(save_chunks())
 
-        # Combine all chunks into one file using ffmpeg
-        output_file = f"output_{uuid.uuid4().hex}.mp3"
+        # Combine all chunks into one file
+        output_file = f"/tmp/output_{uuid.uuid4().hex}.mp3"
+
         if len(chunk_files) == 1:
             os.rename(chunk_files[0], output_file)
         else:
-            # Write file list for ffmpeg
-            list_file = f"list_{uuid.uuid4().hex}.txt"
-            with open(list_file, 'w') as f:
+            import subprocess
+
+            list_file = f"/tmp/list_{uuid.uuid4().hex}.txt"
+
+            with open(list_file, "w") as f:
                 for cf in chunk_files:
                     f.write(f"file '{cf}'\n")
-            os.system(f'ffmpeg -f concat -safe 0 -i "{list_file}" -c copy "{output_file}" -y -loglevel error')
+
+            subprocess.run([
+                "ffmpeg",
+                "-f", "concat",
+                "-safe", "0",
+                "-i", list_file,
+                "-c", "copy",
+                output_file,
+                "-y"
+            ], check=True)
+
             os.remove(list_file)
+
             for cf in chunk_files:
-                if os.path.exists(cf): os.remove(cf)
+                if os.path.exists(cf):
+                    os.remove(cf)
 
         # Cleanup old output files
-        for f in os.listdir("."):
-            if f.startswith("output_") and f.endswith(".mp3") and f != output_file:
-                try: os.remove(f)
-                except: pass
+        for f in os.listdir("/tmp"):
+            full_path = os.path.join("/tmp", f)
+            if f.startswith("output_") and f.endswith(".mp3") and full_path != output_file:
+                try:
+                    os.remove(full_path)
+                except:
+                    pass
 
         token = uuid.uuid4().hex
         app.config[f"audio_{token}"] = output_file
@@ -117,8 +135,11 @@ def transcribe():
 
     uploaded = request.files["video"]
     ext = os.path.splitext(uploaded.filename.lower())[1]
-    input_path = f"upload_{uuid.uuid4().hex}{ext}"
-    audio_path = input_path.replace(ext, ".wav")
+
+    base_id = uuid.uuid4().hex
+    input_path = f"/tmp/upload_{base_id}{ext}"
+    audio_path = f"/tmp/upload_{base_id}.wav"
+
     uploaded.save(input_path)
 
     try:
@@ -145,7 +166,7 @@ def transcribe():
         if not os.path.exists(audio_path) or os.path.getsize(audio_path) == 0:
             return jsonify({"error": "Audio file was not created properly"})
 
-        # 🔥 TRANSCRIBE HERE
+        # Transcribe
         segments, _ = model.transcribe(audio_path)
         transcript = " ".join([s.text for s in segments])
 
